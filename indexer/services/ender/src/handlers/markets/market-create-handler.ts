@@ -21,14 +21,14 @@ export class MarketCreateHandler extends Handler<MarketEventV1> {
     return [`${this.eventType}_${this.event.marketId}`];
   }
 
-  public async internalHandle(): Promise<ConsolidatedKafkaEvent[]> {
+  public async internalHandle(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     logger.info({
       at: 'MarketCreateHandler#handle',
       message: 'Received MarketEvent with MarketCreate.',
       event: this.event,
     });
     if (config.USE_MARKET_CREATE_HANDLER_SQL_FUNCTION) {
-      return this.handleViaSqlFunction();
+      return this.handleViaSqlFunction(resultRow);
     }
     return this.handleViaKnexQueries();
   }
@@ -54,33 +54,36 @@ export class MarketCreateHandler extends Handler<MarketEventV1> {
     return [];
   }
 
-  private async handleViaSqlFunction(): Promise<ConsolidatedKafkaEvent[]> {
+  private async handleViaSqlFunction(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     const eventDataBinary: Uint8Array = this.indexerTendermintEvent.dataBytes;
-    const result: pg.QueryResult = await storeHelpers.rawQuery(
-      `SELECT dydx_market_create_handler(
+    if (resultRow === undefined) {
+      const result: pg.QueryResult = await storeHelpers.rawQuery(
+          `SELECT dydx_market_create_handler(
         '${JSON.stringify(MarketEventV1.decode(eventDataBinary))}'
       ) AS result;`,
-      { txId: this.txId },
-    ).catch((error: Error) => {
-      logger.error({
-        at: 'MarketCreateHandler#handleViaSqlFunction',
-        message: 'Failed to handle MarketEventV1',
-        error,
+          {txId: this.txId},
+      ).catch((error: Error) => {
+        logger.error({
+          at: 'MarketCreateHandler#handleViaSqlFunction',
+          message: 'Failed to handle MarketEventV1',
+          error,
+        });
+
+        if (error.message.includes('Market in MarketCreate already exists')) {
+          const marketCreate: MarketCreateEventMessage = this.event as MarketCreateEventMessage;
+          this.logAndThrowParseMessageError(
+              'Market in MarketCreate already exists',
+              {marketCreate},
+          );
+        }
+
+        throw error;
       });
-
-      if (error.message.includes('Market in MarketCreate already exists')) {
-        const marketCreate: MarketCreateEventMessage = this.event as MarketCreateEventMessage;
-        this.logAndThrowParseMessageError(
-          'Market in MarketCreate already exists',
-          { marketCreate },
-        );
-      }
-
-      throw error;
-    });
+      resultRow = result.rows[0].result;
+    }
 
     const market: MarketFromDatabase = MarketModel.fromJson(
-      result.rows[0].result.market) as MarketFromDatabase;
+        resultRow!.market) as MarketFromDatabase;
     marketRefresher.updateMarket(market);
     return [];
   }

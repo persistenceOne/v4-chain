@@ -39,33 +39,36 @@ export abstract class AbstractStatefulOrderHandler<T> extends Handler<T> {
     ];
   }
 
-  protected async handleEventViaSqlFunction():
+  protected async handleEventViaSqlFunction(resultRow: pg.QueryResultRow | undefined):
   Promise<[OrderFromDatabase,
     PerpetualMarketFromDatabase,
     SubaccountFromDatabase | undefined]> {
     const eventDataBinary: Uint8Array = this.indexerTendermintEvent.dataBytes;
-    const result: pg.QueryResult = await storeHelpers.rawQuery(
-      `SELECT dydx_stateful_order_handler(
+    if (resultRow === undefined) {
+      const result: pg.QueryResult = await storeHelpers.rawQuery(
+          `SELECT dydx_stateful_order_handler(
         ${this.block.height},
         '${this.block.time?.toISOString()}',
         '${JSON.stringify(StatefulOrderEventV1.decode(eventDataBinary))}'
       ) AS result;`,
-      { txId: this.txId },
-    ).catch((error: Error) => {
-      logger.error({
-        at: 'AbstractStatefulOrderHandler#handleEventViaSqlFunction',
-        message: 'Failed to handle StatefulOrderEventV1',
-        error,
+          {txId: this.txId},
+      ).catch((error: Error) => {
+        logger.error({
+          at: 'AbstractStatefulOrderHandler#handleEventViaSqlFunction',
+          message: 'Failed to handle StatefulOrderEventV1',
+          error,
+        });
+        throw error;
       });
-      throw error;
-    });
+      resultRow = result.rows[0].result;
+    }
 
     return [
-      OrderModel.fromJson(result.rows[0].result.order) as OrderFromDatabase,
+      OrderModel.fromJson(resultRow!.order) as OrderFromDatabase,
       PerpetualMarketModel.fromJson(
-        result.rows[0].result.perpetual_market) as PerpetualMarketFromDatabase,
-      result.rows[0].result.subaccount
-        ? SubaccountModel.fromJson(result.rows[0].result.subaccount) as SubaccountFromDatabase
+          resultRow!.perpetual_market) as PerpetualMarketFromDatabase,
+      resultRow!.subaccount
+        ? SubaccountModel.fromJson(resultRow!.subaccount) as SubaccountFromDatabase
         : undefined,
     ];
   }

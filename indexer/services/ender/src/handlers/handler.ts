@@ -25,6 +25,7 @@ import { indexerTendermintEventToTransactionIndex } from '../lib/helper';
 import {
   AnnotatedSubaccountMessage, ConsolidatedKafkaEvent, EventMessage, SingleTradeMessage,
 } from '../lib/types';
+import * as pg from 'pg';
 
 export type HandlerInitializer = new (
   block: IndexerTendermintBlock,
@@ -70,7 +71,7 @@ export abstract class Handler<T> {
    * txId provided in the constructor, then returns all consolidated kafka events to be
    * written to Kafka.
    */
-  public abstract internalHandle(): Promise<ConsolidatedKafkaEvent[]>;
+  public abstract internalHandle(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]>;
 
   /**
    * Handle the event and export timing stats
@@ -78,7 +79,7 @@ export abstract class Handler<T> {
   public async handle(): Promise<ConsolidatedKafkaEvent[]> {
     const start: number = Date.now();
     try {
-      return await this.internalHandle();
+      return await this.internalHandle(undefined);
     } finally {
       stats.timing(
         `${config.SERVICE_NAME}.handle_event.timing`,

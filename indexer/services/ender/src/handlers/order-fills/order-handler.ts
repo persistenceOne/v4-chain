@@ -60,7 +60,7 @@ export class OrderHandler extends AbstractOrderFillHandler<OrderFillWithLiquidit
     ];
   }
 
-  public async handleViaSqlFunction(): Promise<ConsolidatedKafkaEvent[]> {
+  public async handleViaSqlFunction(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     const eventDataBinary: Uint8Array = this.indexerTendermintEvent.dataBytes;
     const transactionIndex: number = indexerTendermintEventToTransactionIndex(
       this.indexerTendermintEvent,
@@ -81,37 +81,40 @@ export class OrderHandler extends AbstractOrderFillHandler<OrderFillWithLiquidit
       redisClient,
     );
 
-    const result: pg.QueryResult = await storeHelpers.rawQuery(
-      `SELECT dydx_order_fill_handler_per_order(
-        '${field}', 
-        ${this.block.height}, 
-        '${this.block.time?.toISOString()}', 
-        '${JSON.stringify(OrderFillEventV1.decode(eventDataBinary))}', 
-        ${this.indexerTendermintEvent.eventIndex}, 
-        ${transactionIndex}, 
-        '${this.block.txHashes[transactionIndex]}', 
-        '${this.event.liquidity}', 
-        'LIMIT',
-        '${USDC_ASSET_ID}',
-        '${canceledOrderStatus}'
-      ) AS result;`,
-      { txId: this.txId },
-    ).catch((error: Error) => {
-      logger.error({
-        at: 'orderHandler#handleViaSqlFunction',
-        message: 'Failed to handle OrderFillEventV1',
-        error,
+    if (resultRow === undefined) {
+      const result: pg.QueryResult = await storeHelpers.rawQuery(
+        `SELECT dydx_order_fill_handler_per_order(
+          '${field}', 
+          ${this.block.height}, 
+          '${this.block.time?.toISOString()}', 
+          '${JSON.stringify(OrderFillEventV1.decode(eventDataBinary))}', 
+          ${this.indexerTendermintEvent.eventIndex}, 
+          ${transactionIndex}, 
+          '${this.block.txHashes[transactionIndex]}', 
+          '${this.event.liquidity}', 
+          'LIMIT',
+          '${USDC_ASSET_ID}',
+          '${canceledOrderStatus}'
+        ) AS result;`,
+        { txId: this.txId },
+      ).catch((error: Error) => {
+        logger.error({
+          at: 'orderHandler#handleViaSqlFunction',
+          message: 'Failed to handle OrderFillEventV1',
+          error,
+        });
+        throw error;
       });
-      throw error;
-    });
+      resultRow = result.rows[0].result;
+    }
     const order: OrderFromDatabase = OrderModel.fromJson(
-      result.rows[0].result.order) as OrderFromDatabase;
+        resultRow!.order) as OrderFromDatabase;
     const fill: FillFromDatabase = FillModel.fromJson(
-      result.rows[0].result.fill) as FillFromDatabase;
+        resultRow!.fill) as FillFromDatabase;
     const perpetualMarket: PerpetualMarketFromDatabase = PerpetualMarketModel.fromJson(
-      result.rows[0].result.perpetual_market) as PerpetualMarketFromDatabase;
+        resultRow!.perpetual_market) as PerpetualMarketFromDatabase;
     const position: PerpetualPositionFromDatabase = PerpetualPositionModel.fromJson(
-      result.rows[0].result.perpetual_position) as PerpetualPositionFromDatabase;
+        resultRow!.perpetual_position) as PerpetualPositionFromDatabase;
 
     let subaccountId: IndexerSubaccountId;
     if (this.event.liquidity === Liquidity.MAKER) {
@@ -264,9 +267,9 @@ export class OrderHandler extends AbstractOrderFillHandler<OrderFillWithLiquidit
       : castedOrderFillEventMessage.totalFilledMaker;
   }
 
-  public async internalHandle(): Promise<ConsolidatedKafkaEvent[]> {
+  public async internalHandle(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     if (config.USE_ORDER_HANDLER_SQL_FUNCTION) {
-      return this.handleViaSqlFunction();
+      return this.handleViaSqlFunction(resultRow);
     }
     return this.handleViaKnexQueries();
   }

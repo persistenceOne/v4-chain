@@ -17,14 +17,14 @@ export class MarketModifyHandler extends Handler<MarketEventV1> {
     return [`${this.eventType}_${this.event.marketId}`];
   }
 
-  public async internalHandle(): Promise<ConsolidatedKafkaEvent[]> {
+  public async internalHandle(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     logger.info({
       at: 'MarketModifyHandler#handle',
       message: 'Received MarketEvent with MarketCreate.',
       event: this.event,
     });
     if (config.USE_MARKET_MODIFY_HANDLER_SQL_FUNCTION) {
-      return this.handleViaSqlFunction();
+      return this.handleViaSqlFunction(resultRow);
     }
     return this.handleViaKnexQueries();
   }
@@ -46,38 +46,41 @@ export class MarketModifyHandler extends Handler<MarketEventV1> {
     return [];
   }
 
-  private async handleViaSqlFunction(): Promise<ConsolidatedKafkaEvent[]> {
+  private async handleViaSqlFunction(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     const eventDataBinary: Uint8Array = this.indexerTendermintEvent.dataBytes;
-    const result: pg.QueryResult = await storeHelpers.rawQuery(
-      `SELECT dydx_market_modify_handler(
+    if (resultRow === undefined) {
+      const result: pg.QueryResult = await storeHelpers.rawQuery(
+          `SELECT dydx_market_modify_handler(
         '${JSON.stringify(MarketEventV1.decode(eventDataBinary))}' 
       ) AS result;`,
-      { txId: this.txId },
-    ).catch((error: Error) => {
-      logger.error({
-        at: 'MarketModifyHandler#handleViaSqlFunction',
-        message: 'Failed to handle MarketEventV1',
-        error,
-      });
+          {txId: this.txId},
+      ).catch((error: Error) => {
+        logger.error({
+          at: 'MarketModifyHandler#handleViaSqlFunction',
+          message: 'Failed to handle MarketEventV1',
+          error,
+        });
 
-      const castedMarketModifyMessage:
-      MarketModifyEventMessage = this.event as MarketModifyEventMessage;
+        const castedMarketModifyMessage:
+            MarketModifyEventMessage = this.event as MarketModifyEventMessage;
 
-      if (error.message.includes('Market in MarketModify doesn\'t exist')) {
+        if (error.message.includes('Market in MarketModify doesn\'t exist')) {
+          this.logAndThrowParseMessageError(
+              'Market in MarketModify doesn\'t exist',
+              {castedMarketModifyMessage},
+          );
+        }
+
         this.logAndThrowParseMessageError(
-          'Market in MarketModify doesn\'t exist',
-          { castedMarketModifyMessage },
+            'Failed to update market in markets table',
+            {castedMarketModifyMessage},
         );
-      }
-
-      this.logAndThrowParseMessageError(
-        'Failed to update market in markets table',
-        { castedMarketModifyMessage },
-      );
-    });
+      });
+      resultRow = result.rows[0].result;
+    }
 
     const market: MarketFromDatabase = MarketModel.fromJson(
-      result.rows[0].result.market) as MarketFromDatabase;
+      resultRow!.market) as MarketFromDatabase;
     marketRefresher.updateMarket(market);
     return [];
   }

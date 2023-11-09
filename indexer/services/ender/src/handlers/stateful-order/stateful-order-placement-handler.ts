@@ -17,6 +17,7 @@ import {
 import config from '../../config';
 import { ConsolidatedKafkaEvent } from '../../lib/types';
 import { AbstractStatefulOrderHandler } from '../abstract-stateful-order-handler';
+import * as pg from "pg";
 
 // TODO(IND-334): Rename to LongTermOrderPlacementHandler after deprecating StatefulOrderPlacement
 export class StatefulOrderPlacementHandler extends
@@ -36,15 +37,15 @@ export class StatefulOrderPlacementHandler extends
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await
-  public async internalHandle(): Promise<ConsolidatedKafkaEvent[]> {
+  public async internalHandle(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     if (config.USE_STATEFUL_ORDER_HANDLER_SQL_FUNCTION) {
-      return this.handleViaSqlFunction();
+      return this.handleViaSqlFunction(resultRow);
     }
     return this.handleViaKnex();
   }
 
-  private async handleViaSqlFunction(): Promise<ConsolidatedKafkaEvent[]> {
-    await this.handleEventViaSqlFunction();
+  private async handleViaSqlFunction(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
+    await this.handleEventViaSqlFunction(resultRow);
 
     let order: IndexerOrder;
     // TODO(IND-334): Remove after deprecating StatefulOrderPlacementEvent

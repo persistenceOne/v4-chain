@@ -56,40 +56,43 @@ export class SubaccountUpdateHandler extends Handler<SubaccountUpdate> {
     ];
   }
 
-  public async internalHandle(): Promise<ConsolidatedKafkaEvent[]> {
+  public async internalHandle(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     if (config.USE_SUBACCOUNT_UPDATE_SQL_FUNCTION) {
-      return this.handleViaSqlFunction();
+      return this.handleViaSqlFunction(resultRow);
     }
     return this.handleViaKnexQueries();
   }
 
-  public async handleViaSqlFunction(): Promise<ConsolidatedKafkaEvent[]> {
+  public async handleViaSqlFunction(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     const transactionIndex: number = indexerTendermintEventToTransactionIndex(
       this.indexerTendermintEvent,
     );
 
-    const result: pg.QueryResult = await storeHelpers.rawQuery(`SELECT dydx_subaccount_update_handler(
+    if (resultRow === undefined) {
+      const result: pg.QueryResult = await storeHelpers.rawQuery(`SELECT dydx_subaccount_update_handler(
       ${this.block.height}, 
       '${this.block.time?.toISOString()}', 
       '${JSON.stringify(this.event)}', 
       ${this.indexerTendermintEvent.eventIndex}, 
       ${transactionIndex}) AS result;`,
-    { txId: this.txId },
-    ).catch((error: Error) => {
-      logger.error({
-        at: 'subaccountUpdateHandler#handleViaSqlFunction',
-        message: 'Failed to handle SubaccountUpdateEventV1',
-        error,
+          {txId: this.txId},
+      ).catch((error: Error) => {
+        logger.error({
+          at: 'subaccountUpdateHandler#handleViaSqlFunction',
+          message: 'Failed to handle SubaccountUpdateEventV1',
+          error,
+        });
+        throw error;
       });
-      throw error;
-    });
+      resultRow = result.rows[0].result;
+    }
     const updateObjects: UpdatedPerpetualPositionSubaccountKafkaObject[] = _.map(
-      result.rows[0].result.perpetual_positions,
+      resultRow!.perpetual_positions,
       (value) => PerpetualPositionModel.fromJson(
         value) as UpdatedPerpetualPositionSubaccountKafkaObject,
     );
     const updatedAssetPositions: AssetPositionFromDatabase[] = _.map(
-      result.rows[0].result.asset_positions,
+      resultRow!.asset_positions,
       (value) => AssetPositionModel.fromJson(value) as AssetPositionFromDatabase,
     );
     const markets: MarketFromDatabase[] = await MarketTable.findAll(

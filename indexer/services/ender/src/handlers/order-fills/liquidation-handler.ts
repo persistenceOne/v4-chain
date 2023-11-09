@@ -86,7 +86,7 @@ export class LiquidationHandler extends AbstractOrderFillHandler<OrderFillWithLi
       : castedOrderFillEventMessage.totalFilledMaker;
   }
 
-  public async handleViaSqlFunction(): Promise<ConsolidatedKafkaEvent[]> {
+  private async handleViaSqlFunction(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     const eventDataBinary: Uint8Array = this.indexerTendermintEvent.dataBytes;
     const transactionIndex: number = indexerTendermintEventToTransactionIndex(
       this.indexerTendermintEvent,
@@ -101,8 +101,9 @@ export class LiquidationHandler extends AbstractOrderFillHandler<OrderFillWithLi
     const fillType: string = this.event.liquidity === Liquidity.MAKER
       ? FillType.LIQUIDATION : FillType.LIQUIDATED;
 
-    const result: pg.QueryResult = await storeHelpers.rawQuery(
-      `SELECT dydx_liquidation_fill_handler_per_order(
+    if (resultRow === undefined) {
+      const result: pg.QueryResult = await storeHelpers.rawQuery(
+          `SELECT dydx_liquidation_fill_handler_per_order(
         '${field}', 
         ${this.block.height}, 
         '${this.block.time?.toISOString()}', 
@@ -114,28 +115,30 @@ export class LiquidationHandler extends AbstractOrderFillHandler<OrderFillWithLi
         '${fillType}',
         '${USDC_ASSET_ID}'
       ) AS result;`,
-      { txId: this.txId },
-    ).catch((error: Error) => {
-      logger.error({
-        at: 'liquidationHandler#handleViaSqlFunction',
-        message: 'Failed to handle OrderFillEventV1',
-        error,
+          {txId: this.txId},
+      ).catch((error: Error) => {
+        logger.error({
+          at: 'liquidationHandler#handleViaSqlFunction',
+          message: 'Failed to handle OrderFillEventV1',
+          error,
+        });
+        throw error;
       });
-      throw error;
-    });
+      resultRow = result.rows[0].result;
+    }
 
     const fill: FillFromDatabase = FillModel.fromJson(
-      result.rows[0].result.fill) as FillFromDatabase;
+        resultRow!.fill) as FillFromDatabase;
     const perpetualMarket: PerpetualMarketFromDatabase = PerpetualMarketModel.fromJson(
-      result.rows[0].result.perpetual_market) as PerpetualMarketFromDatabase;
+        resultRow!.perpetual_market) as PerpetualMarketFromDatabase;
     const position: PerpetualPositionFromDatabase = PerpetualPositionModel.fromJson(
-      result.rows[0].result.perpetual_position) as PerpetualPositionFromDatabase;
+        resultRow!.perpetual_position) as PerpetualPositionFromDatabase;
 
     if (this.event.liquidity === Liquidity.MAKER) {
       // Must be done in this order, because fills refer to an order
       // We do not create a taker order for liquidations.
       const makerOrder: OrderFromDatabase = OrderModel.fromJson(
-        result.rows[0].result.order) as OrderFromDatabase;
+        resultRow!.order) as OrderFromDatabase;
 
       // Update the cache tracking the state-filled amount per order for use in vulcan
       await StateFilledQuantumsCache.updateStateFilledQuantums(
@@ -184,8 +187,7 @@ export class LiquidationHandler extends AbstractOrderFillHandler<OrderFillWithLi
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  public async handleViaKnexQueries(): Promise<ConsolidatedKafkaEvent[]> {
+  private async handleViaKnexQueries(): Promise<ConsolidatedKafkaEvent[]> {
     const castedLiquidationFillEventMessage:
     OrderFillEventWithLiquidation = orderFillWithLiquidityToOrderFillEventWithLiquidation(
       this.event,
@@ -280,9 +282,9 @@ export class LiquidationHandler extends AbstractOrderFillHandler<OrderFillWithLi
     }
   }
 
-  public async internalHandle(): Promise<ConsolidatedKafkaEvent[]> {
+  public async internalHandle(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     if (config.USE_LIQUIDATION_HANDLER_SQL_FUNCTION) {
-      return this.handleViaSqlFunction();
+      return this.handleViaSqlFunction(resultRow);
     }
     return this.handleViaKnexQueries();
   }

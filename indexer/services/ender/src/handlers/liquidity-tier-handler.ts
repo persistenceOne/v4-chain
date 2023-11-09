@@ -28,32 +28,35 @@ export class LiquidityTierHandler extends Handler<LiquidityTierUpsertEventV1> {
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await
-  public async internalHandle(): Promise<ConsolidatedKafkaEvent[]> {
+  public async internalHandle(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     if (config.USE_LIQUIDITY_TIER_HANDLER_SQL_FUNCTION) {
-      return this.handleViaSqlFunction();
+      return this.handleViaSqlFunction(resultRow);
     }
     return this.handleViaKnex();
   }
 
-  private async handleViaSqlFunction(): Promise<ConsolidatedKafkaEvent[]> {
+  private async handleViaSqlFunction(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     const eventDataBinary: Uint8Array = this.indexerTendermintEvent.dataBytes;
-    const result: pg.QueryResult = await storeHelpers.rawQuery(
-      `SELECT dydx_liquidity_tier_handler(
+    if (resultRow === undefined) {
+      const result: pg.QueryResult = await storeHelpers.rawQuery(
+          `SELECT dydx_liquidity_tier_handler(
         '${JSON.stringify(LiquidityTierUpsertEventV1.decode(eventDataBinary))}'
       ) AS result;`,
-      { txId: this.txId },
-    ).catch((error: Error) => {
-      logger.error({
-        at: 'LiquidityTierHandler#handleViaSqlFunction',
-        message: 'Failed to handle LiquidityTierUpsertEventV1',
-        error,
-      });
+          {txId: this.txId},
+      ).catch((error: Error) => {
+        logger.error({
+          at: 'LiquidityTierHandler#handleViaSqlFunction',
+          message: 'Failed to handle LiquidityTierUpsertEventV1',
+          error,
+        });
 
-      throw error;
-    });
+        throw error;
+      });
+      resultRow = result.rows[0].result;
+    }
 
     const liquidityTier: LiquidityTiersFromDatabase = LiquidityTiersModel.fromJson(
-      result.rows[0].result.liquidity_tier) as LiquidityTiersFromDatabase;
+      resultRow!.liquidity_tier) as LiquidityTiersFromDatabase;
     liquidityTierRefresher.upsertLiquidityTier(liquidityTier);
     return this.generateWebsocketEventsForLiquidityTier(liquidityTier);
   }

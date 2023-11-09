@@ -22,32 +22,35 @@ export class AssetCreationHandler extends Handler<AssetCreateEventV1> {
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await
-  public async internalHandle(): Promise<ConsolidatedKafkaEvent[]> {
+  public async internalHandle(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     if (config.USE_ASSET_CREATE_HANDLER_SQL_FUNCTION) {
-      return this.handleViaSqlFunction();
+      return this.handleViaSqlFunction(resultRow);
     }
     return this.handleViaKnex();
   }
 
-  private async handleViaSqlFunction(): Promise<ConsolidatedKafkaEvent[]> {
+  private async handleViaSqlFunction(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     const eventDataBinary: Uint8Array = this.indexerTendermintEvent.dataBytes;
-    const result: pg.QueryResult = await storeHelpers.rawQuery(
-      `SELECT dydx_asset_create_handler(
+    if (resultRow === undefined) {
+      const result: pg.QueryResult = await storeHelpers.rawQuery(
+          `SELECT dydx_asset_create_handler(
         '${JSON.stringify(AssetCreateEventV1.decode(eventDataBinary))}'
       ) AS result;`,
-      { txId: this.txId },
-    ).catch((error: Error) => {
-      logger.error({
-        at: 'AssetCreationHandler#handleViaSqlFunction',
-        message: 'Failed to handle AssetCreateEventV1',
-        error,
-      });
+          {txId: this.txId},
+      ).catch((error: Error) => {
+        logger.error({
+          at: 'AssetCreationHandler#handleViaSqlFunction',
+          message: 'Failed to handle AssetCreateEventV1',
+          error,
+        });
 
-      throw error;
-    });
+        throw error;
+      });
+      resultRow = result.rows[0].result;
+    }
 
     const asset: AssetFromDatabase = AssetModel.fromJson(
-      result.rows[0].result.asset) as AssetFromDatabase;
+      resultRow!.asset) as AssetFromDatabase;
     assetRefresher.addAsset(asset);
     return [];
   }

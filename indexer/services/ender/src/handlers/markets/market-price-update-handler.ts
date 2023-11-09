@@ -35,14 +35,14 @@ export class MarketPriceUpdateHandler extends Handler<MarketEventV1> {
     return [`${this.eventType}_${this.event.marketId}`];
   }
 
-  public async internalHandle(): Promise<ConsolidatedKafkaEvent[]> {
+  public async internalHandle(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     logger.info({
       at: 'MarketPriceUpdateHandler#handle',
       message: 'Received MarketEvent with MarketPriceUpdate.',
       event: this.event,
     });
     if (config.USE_MARKET_MODIFY_HANDLER_SQL_FUNCTION) {
-      return this.handleViaSqlFunction();
+      return this.handleViaSqlFunction(resultRow);
     }
     return this.handleViaKnexQueries();
   }
@@ -64,38 +64,41 @@ export class MarketPriceUpdateHandler extends Handler<MarketEventV1> {
     ];
   }
 
-  private async handleViaSqlFunction(): Promise<ConsolidatedKafkaEvent[]> {
+  private async handleViaSqlFunction(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     const eventDataBinary: Uint8Array = this.indexerTendermintEvent.dataBytes;
-    const result: pg.QueryResult = await storeHelpers.rawQuery(
-      `SELECT dydx_market_price_update_handler(
+    if (resultRow === undefined) {
+      const result: pg.QueryResult = await storeHelpers.rawQuery(
+          `SELECT dydx_market_price_update_handler(
         ${this.block.height}, 
         '${this.block.time?.toISOString()}', 
         '${JSON.stringify(MarketEventV1.decode(eventDataBinary))}' 
       ) AS result;`,
-      { txId: this.txId },
-    ).catch((error: Error) => {
-      logger.error({
-        at: 'MarketPriceUpdateHandler#handleViaSqlFunction',
-        message: 'Failed to handle MarketEventV1',
-        error,
+          {txId: this.txId},
+      ).catch((error: Error) => {
+        logger.error({
+          at: 'MarketPriceUpdateHandler#handleViaSqlFunction',
+          message: 'Failed to handle MarketEventV1',
+          error,
+        });
+
+        if (error.message.includes('MarketPriceUpdateEvent contains a non-existent market id')) {
+          const castedMarketPriceUpdateMessage:
+              MarketPriceUpdateEventMessage = this.event as MarketPriceUpdateEventMessage;
+          this.logAndThrowParseMessageError(
+              'MarketPriceUpdateEvent contains a non-existent market id',
+              {castedMarketPriceUpdateMessage},
+          );
+        }
+
+        throw error;
       });
-
-      if (error.message.includes('MarketPriceUpdateEvent contains a non-existent market id')) {
-        const castedMarketPriceUpdateMessage:
-        MarketPriceUpdateEventMessage = this.event as MarketPriceUpdateEventMessage;
-        this.logAndThrowParseMessageError(
-          'MarketPriceUpdateEvent contains a non-existent market id',
-          { castedMarketPriceUpdateMessage },
-        );
-      }
-
-      throw error;
-    });
+      resultRow = result.rows[0].result;
+    }
 
     const market: MarketFromDatabase = MarketModel.fromJson(
-      result.rows[0].result.market) as MarketFromDatabase;
+      resultRow!.market) as MarketFromDatabase;
     const oraclePrice: OraclePriceFromDatabase = OraclePriceModel.fromJson(
-      result.rows[0].result.oracle_price) as OraclePriceFromDatabase;
+      resultRow!.oracle_price) as OraclePriceFromDatabase;
 
     marketRefresher.updateMarket(market);
     updatePriceCacheWithPrice(oraclePrice);
