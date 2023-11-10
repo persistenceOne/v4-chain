@@ -52,6 +52,7 @@ import { MarketModifyHandler } from '../../src/handlers/markets/market-modify-ha
 import Long from 'long';
 import { createPostgresFunctions } from '../../src/helpers/postgres/postgres-functions';
 import { DeleveragingHandler } from '../../src/handlers/order-fills/deleveraging-handler';
+import * as pg from 'pg';
 
 jest.mock('../../src/handlers/subaccount-update-handler');
 jest.mock('../../src/handlers/transfer-handler');
@@ -65,27 +66,27 @@ describe('on-message', () => {
 
   beforeEach(() => {
     (SubaccountUpdateHandler as jest.Mock).mockReturnValue({
-      handle: () => [],
+      handle: (_: pg.QueryResultRow | undefined) => [],
       validate: () => null,
       getParallelizationIds: () => [],
     });
     (TransferHandler as jest.Mock).mockReturnValue({
-      handle: () => [],
+      handle: (_: pg.QueryResultRow | undefined) => [],
       validate: () => null,
       getParallelizationIds: () => [],
     });
     (MarketModifyHandler as jest.Mock).mockReturnValue({
-      handle: () => [],
+      handle: (_: pg.QueryResultRow | undefined) => [],
       validate: () => null,
       getParallelizationIds: () => [],
     });
     (FundingHandler as jest.Mock).mockReturnValue({
-      handle: () => [],
+      handle: (_: pg.QueryResultRow | undefined) => [],
       validate: () => null,
       getParallelizationIds: () => [],
     });
     (DeleveragingHandler as jest.Mock).mockReturnValue({
-      handle: () => [],
+      handle: (_: pg.QueryResultRow | undefined) => [],
       validate: () => null,
       getParallelizationIds: () => [],
     });
@@ -211,6 +212,7 @@ describe('on-message', () => {
     expect((SubaccountUpdateHandler as jest.Mock)).toHaveBeenNthCalledWith(
       1,
       block,
+      0,
       events[0],
       expect.any(Number),
       defaultSubaccountUpdateEvent,
@@ -269,6 +271,7 @@ describe('on-message', () => {
     expect((SubaccountUpdateHandler as jest.Mock)).toHaveBeenNthCalledWith(
       1,
       block,
+        0,
       events[0],
       expect.any(Number),
       defaultSubaccountUpdateEvent,
@@ -313,6 +316,7 @@ describe('on-message', () => {
     expect((TransferHandler as jest.Mock)).toHaveBeenNthCalledWith(
       1,
       block,
+        0,
       events[0],
       expect.any(Number),
       defaultTransferEvent,
@@ -370,6 +374,7 @@ describe('on-message', () => {
     expect((FundingHandler as jest.Mock)).toHaveBeenNthCalledWith(
       1,
       block,
+        0,
       events[0],
       expect.any(Number),
       defaultFundingUpdateSampleEvent,
@@ -427,6 +432,7 @@ describe('on-message', () => {
     expect((DeleveragingHandler as jest.Mock)).toHaveBeenNthCalledWith(
       1,
       block,
+        0,
       events[0],
       expect.any(Number),
       defaultDeleveragingEvent,
@@ -504,6 +510,7 @@ describe('on-message', () => {
     expect((TransferHandler as jest.Mock)).toHaveBeenNthCalledWith(
       1,
       block,
+        0,
       events[0],
       expect.any(Number),
       defaultTransferEvent,
@@ -549,6 +556,7 @@ describe('on-message', () => {
     expect((MarketModifyHandler as jest.Mock)).toHaveBeenNthCalledWith(
       1,
       block,
+        0,
       events[0],
       expect.any(Number),
       defaultMarketModify,
@@ -670,6 +678,7 @@ describe('on-message', () => {
     expect((SubaccountUpdateHandler as jest.Mock)).toHaveBeenNthCalledWith(
       1,
       block,
+        0,
       events[0],
       expect.any(Number),
       defaultSubaccountUpdateEvent,
@@ -747,6 +756,7 @@ describe('on-message', () => {
     expect((SubaccountUpdateHandler as jest.Mock)).toHaveBeenNthCalledWith(
       1,
       block,
+        0,
       events[0],
       expect.any(Number),
       defaultSubaccountUpdateEvent,
@@ -754,6 +764,7 @@ describe('on-message', () => {
     expect((SubaccountUpdateHandler as jest.Mock)).toHaveBeenNthCalledWith(
       2,
       block,
+        1,
       events[1],
       expect.any(Number),
       defaultSubaccountUpdateEvent,
@@ -761,6 +772,7 @@ describe('on-message', () => {
     expect((SubaccountUpdateHandler as jest.Mock)).toHaveBeenNthCalledWith(
       3,
       block,
+        2,
       events[2],
       expect.any(Number),
       defaultSubaccountUpdateEvent,
@@ -809,7 +821,7 @@ describe('on-message', () => {
     }
 
     (SubaccountUpdateHandler as jest.Mock).mockReturnValue({
-      handle: () => kafkaMessages,
+      handle: (_: pg.QueryResultRow | undefined) => kafkaMessages,
       validate: () => null,
       getParallelizationIds: () => [],
     });
@@ -868,7 +880,7 @@ describe('on-message', () => {
     }
 
     (SubaccountUpdateHandler as jest.Mock).mockReturnValue({
-      handle: () => kafkaMessages,
+      handle: (_: pg.QueryResultRow | undefined) => kafkaMessages,
       validate: () => null,
       getParallelizationIds: () => [],
     });
@@ -951,7 +963,7 @@ describe('on-message', () => {
     await perpetualMarketRefresher.updatePerpetualMarkets();
     await marketRefresher.updateMarkets();
     (SubaccountUpdateHandler as jest.Mock).mockReturnValue({
-      handle: () => {
+      handle: (_: pg.QueryResultRow | undefined) => {
         // clear cache so we can confirm that the cache is updated after the error
         assetRefresher.clear();
         perpetualMarketRefresher.clear();

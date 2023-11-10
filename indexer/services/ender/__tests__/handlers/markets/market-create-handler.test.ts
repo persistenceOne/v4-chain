@@ -76,6 +76,7 @@ describe('marketCreateHandler', () => {
 
       const handler: MarketCreateHandler = new MarketCreateHandler(
         block,
+          0,
         indexerTendermintEvent,
         0,
         marketEvent,
@@ -102,6 +103,7 @@ describe('marketCreateHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_MARKET_CREATE_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
 
@@ -148,6 +150,7 @@ describe('marketCreateHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_MARKET_CREATE_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
 

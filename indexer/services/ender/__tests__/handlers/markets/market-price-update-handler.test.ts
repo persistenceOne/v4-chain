@@ -85,6 +85,7 @@ describe('marketPriceUpdateHandler', () => {
 
       const handler: MarketPriceUpdateHandler = new MarketPriceUpdateHandler(
         block,
+          0,
         indexerTendermintEvent,
         0,
         marketEvent,
@@ -111,6 +112,7 @@ describe('marketPriceUpdateHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_MARKET_PRICE_UPDATE_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
       const marketPriceUpdate: MarketEventV1 = {
@@ -157,6 +159,7 @@ describe('marketPriceUpdateHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_MARKET_PRICE_UPDATE_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
 
@@ -207,6 +210,7 @@ describe('marketPriceUpdateHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_MARKET_PRICE_UPDATE_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
       const newMarketId: number = 3000;

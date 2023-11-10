@@ -83,6 +83,7 @@ describe('update-clob-pair-handler', () => {
 
       const handler: UpdateClobPairHandler = new UpdateClobPairHandler(
         block,
+          0,
         indexerTendermintEvent,
         0,
         defaultUpdateClobPairEvent,
@@ -107,6 +108,7 @@ describe('update-clob-pair-handler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_UPDATE_CLOB_PAIR_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
       const kafkaMessage: KafkaMessage = createKafkaMessageFromUpdateClobPairEvent({

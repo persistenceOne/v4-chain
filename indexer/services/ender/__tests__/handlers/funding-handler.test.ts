@@ -96,6 +96,7 @@ describe('fundingHandler', () => {
 
       const handler: FundingHandler = new FundingHandler(
         block,
+          0,
         indexerTendermintEvent,
         0,
         defaultFundingUpdateSampleEvent,
@@ -130,6 +131,7 @@ describe('fundingHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_FUNDING_HANDLER_SQL_FUNCTION = useSqlFunction;
       const kafkaMessage: KafkaMessage = createKafkaMessageFromFundingEvents({
         fundingEvents: [defaultFundingUpdateSampleEvent],
@@ -165,6 +167,7 @@ describe('fundingHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_FUNDING_HANDLER_SQL_FUNCTION = useSqlFunction;
       const fundingUpdateSampleEvent2: FundingEventV1 = {
         type: FundingEventV1_Type.TYPE_PREMIUM_SAMPLE,
@@ -220,6 +223,7 @@ describe('fundingHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_FUNDING_HANDLER_SQL_FUNCTION = useSqlFunction;
       const kafkaMessage: KafkaMessage = createKafkaMessageFromFundingEvents({
         fundingEvents: [defaultFundingUpdateSampleEvent],
@@ -280,6 +284,7 @@ describe('fundingHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_FUNDING_HANDLER_SQL_FUNCTION = useSqlFunction;
       const fundingSampleEvent: FundingEventV1 = {
         type: FundingEventV1_Type.TYPE_PREMIUM_SAMPLE,

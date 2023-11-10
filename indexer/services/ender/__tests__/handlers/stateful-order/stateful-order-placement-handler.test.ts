@@ -124,6 +124,7 @@ describe('statefulOrderPlacementHandler', () => {
 
       const handler: StatefulOrderPlacementHandler = new StatefulOrderPlacementHandler(
         block,
+          0,
         indexerTendermintEvent,
         0,
         statefulOrderEvent,
@@ -148,6 +149,7 @@ describe('statefulOrderPlacementHandler', () => {
     statefulOrderEvent: StatefulOrderEventV1,
     useSqlFunction: boolean,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_STATEFUL_ORDER_HANDLER_SQL_FUNCTION = useSqlFunction;
     const kafkaMessage: KafkaMessage = createKafkaMessageFromStatefulOrderEvent(
       statefulOrderEvent,
@@ -205,6 +207,7 @@ describe('statefulOrderPlacementHandler', () => {
     statefulOrderEvent: StatefulOrderEventV1,
     useSqlFunction: boolean,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_STATEFUL_ORDER_HANDLER_SQL_FUNCTION = useSqlFunction;
     const subaccountId: string = SubaccountTable.subaccountIdToUuid(
       defaultOrder.orderId!.subaccountId!,

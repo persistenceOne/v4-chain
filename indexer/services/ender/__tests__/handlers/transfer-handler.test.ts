@@ -126,6 +126,7 @@ describe('transferHandler', () => {
 
       const handler: TransferHandler = new TransferHandler(
         block,
+          0,
         indexerTendermintEvent,
         0,
         defaultTransferEvent,
@@ -150,6 +151,7 @@ describe('transferHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_TRANSFER_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
       const transferEvent: TransferEventV1 = TransferEventV1.fromPartial({
@@ -203,6 +205,7 @@ describe('transferHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_TRANSFER_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
       const transferEvent: TransferEventV1 = TransferEventV1.fromPartial({
@@ -256,6 +259,7 @@ describe('transferHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_TRANSFER_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
 
@@ -323,6 +327,7 @@ describe('transferHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_TRANSFER_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
 
@@ -391,6 +396,7 @@ describe('transferHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_TRANSFER_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
 
@@ -458,6 +464,7 @@ describe('transferHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_TRANSFER_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
 
@@ -526,6 +533,7 @@ describe('transferHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_TRANSFER_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
 

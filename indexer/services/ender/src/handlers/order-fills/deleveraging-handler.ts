@@ -48,13 +48,14 @@ export class DeleveragingHandler extends AbstractOrderFillHandler<DeleveragingEv
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await
-  public async internalHandle(): Promise<ConsolidatedKafkaEvent[]> {
+  public async internalHandle(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     const eventDataBinary: Uint8Array = this.indexerTendermintEvent.dataBytes;
     const transactionIndex: number = indexerTendermintEventToTransactionIndex(
       this.indexerTendermintEvent,
     );
-    const result: pg.QueryResult = await storeHelpers.rawQuery(
-      `SELECT dydx_deleveraging_handler(
+    if (resultRow === undefined) {
+      const result: pg.QueryResult = await storeHelpers.rawQuery(
+          `SELECT dydx_deleveraging_handler(
         ${this.block.height}, 
         '${this.block.time?.toISOString()}', 
         '${JSON.stringify(DeleveragingEventV1.decode(eventDataBinary))}', 
@@ -62,27 +63,29 @@ export class DeleveragingHandler extends AbstractOrderFillHandler<DeleveragingEv
         ${transactionIndex}, 
         '${this.block.txHashes[transactionIndex]}' 
       ) AS result;`,
-      { txId: this.txId },
-    ).catch((error: Error) => {
-      logger.error({
-        at: 'DeleveragingHandler#handleViaSqlFunction',
-        message: 'Failed to handle DeleveragingEventV1',
-        error,
+          {txId: this.txId},
+      ).catch((error: Error) => {
+        logger.error({
+          at: 'DeleveragingHandler#handleViaSqlFunction',
+          message: 'Failed to handle DeleveragingEventV1',
+          error,
+        });
+        throw error;
       });
-      throw error;
-    });
+      resultRow = result.rows[0].result;
+    }
     const liquidatedFill: FillFromDatabase = FillModel.fromJson(
-      result.rows[0].result.liquidated_fill) as FillFromDatabase;
+      resultRow!.liquidated_fill) as FillFromDatabase;
     const offsettingFill: FillFromDatabase = FillModel.fromJson(
-      result.rows[0].result.offsetting_fill) as FillFromDatabase;
+      resultRow!.offsetting_fill) as FillFromDatabase;
     const perpetualMarket: PerpetualMarketFromDatabase = PerpetualMarketModel.fromJson(
-      result.rows[0].result.perpetual_market) as PerpetualMarketFromDatabase;
+      resultRow!.perpetual_market) as PerpetualMarketFromDatabase;
     const liquidatedPerpetualPosition:
     PerpetualPositionFromDatabase = PerpetualPositionModel.fromJson(
-      result.rows[0].result.liquidated_perpetual_position) as PerpetualPositionFromDatabase;
+      resultRow!.liquidated_perpetual_position) as PerpetualPositionFromDatabase;
     const offsettingPerpetualPosition:
     PerpetualPositionFromDatabase = PerpetualPositionModel.fromJson(
-      result.rows[0].result.offsetting_perpetual_position) as PerpetualPositionFromDatabase;
+      resultRow!.offsetting_perpetual_position) as PerpetualPositionFromDatabase;
     const kafkaEvents: ConsolidatedKafkaEvent[] = [
       this.generateConsolidatedKafkaEvent(
         this.event.liquidated!,

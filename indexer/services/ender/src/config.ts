@@ -26,6 +26,9 @@ export const configSchema = {
   USE_ASSET_CREATE_HANDLER_SQL_FUNCTION: parseBoolean({
     default: true,
   }),
+  USE_BLOCK_PROCESSOR_SQL_FUNCTION: parseBoolean({
+    default: true,
+  }),
   USE_FUNDING_HANDLER_SQL_FUNCTION: parseBoolean({
     default: true,
   }),

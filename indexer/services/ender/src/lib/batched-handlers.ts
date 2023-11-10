@@ -5,13 +5,14 @@ import config from '../config';
 import { Handler } from '../handlers/handler';
 import { KafkaPublisher } from './kafka-publisher';
 import { ConsolidatedKafkaEvent, EventMessage } from './types';
+import * as pg from 'pg';
 
 // type alias for an array of handlers, handlers in a `HandlerBatch` can be processed in parallel.
 type HandlerBatch = Handler<EventMessage>[];
 
 export class BatchedHandlers {
   // An array of `HandlerBatch`s. Handlers in a `HandlerBatch` can be processed in parallel, and
-  // `HandlerBatch`s are processed in a sequential order following the order in `bartchedHandlers`.
+  // `HandlerBatch`s are processed in a sequential order following the order in `batchedHandlers`.
   batchedHandlers: HandlerBatch[];
   // An array of sets of parallization ids. Each array of ids is the parallelization ids for the
   // corresponding array of handlers in this.batchedHandlers as well as all the parallelization ids
@@ -71,7 +72,7 @@ export class BatchedHandlers {
    * and ensuring that handlers with overlapping parallelization ids are not processed in parallel.
    * Adds events to the kafkaPublisher.
    */
-  public async process(kafkaPublisher: KafkaPublisher): Promise<void> {
+  public async process(kafkaPublisher: KafkaPublisher, resultRow: pg.QueryResultRow | undefined): Promise<void> {
     for (let batchIndex = 0; batchIndex < this.batchedHandlers.length; batchIndex++) {
       const start: number = Date.now();
       const handlerCountMapping: { [key: string]: number } = {};
@@ -87,7 +88,7 @@ export class BatchedHandlers {
             Date.now() - this.initializationTime,
             { eventType: handler.eventType },
           );
-          return handler.handle();
+          return handler.handle(resultRow ? resultRow[handler.blockEventIndex] : undefined);
         }),
       );
 

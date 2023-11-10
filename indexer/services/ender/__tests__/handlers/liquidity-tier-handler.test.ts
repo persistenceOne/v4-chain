@@ -95,6 +95,7 @@ describe('liquidityTierHandler', () => {
 
       const handler: LiquidityTierHandler = new LiquidityTierHandler(
         block,
+          0,
         indexerTendermintEvent,
         0,
         defaultLiquidityTierUpsertEvent,
@@ -119,6 +120,7 @@ describe('liquidityTierHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_LIQUIDITY_TIER_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
       const liquidityTierEvent: LiquidityTierUpsertEventV1 = defaultLiquidityTierUpsertEvent;
@@ -165,6 +167,7 @@ describe('liquidityTierHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_LIQUIDITY_TIER_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
       const liquidityTierEvent: LiquidityTierUpsertEventV1 = defaultLiquidityTierUpsertEvent;

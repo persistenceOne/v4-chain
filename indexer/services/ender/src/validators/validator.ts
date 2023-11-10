@@ -7,14 +7,17 @@ import { EventMessage } from '../lib/types';
 export type ValidatorInitializer = new (
   event: EventMessage,
   block: IndexerTendermintBlock,
+  eventBlockIndex: number,
 ) => Validator<EventMessage>;
 
 export abstract class Validator<T> {
   event: T;
   block: IndexerTendermintBlock;
+  blockEventIndex: number;
 
-  constructor(event: T, block: IndexerTendermintBlock) {
+  constructor(event: T, block: IndexerTendermintBlock, blockEventIndex: number) {
     this.event = event;
+    this.blockEventIndex = blockEventIndex;
     this.block = block;
   }
 

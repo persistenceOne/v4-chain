@@ -29,6 +29,7 @@ import * as pg from 'pg';
 
 export type HandlerInitializer = new (
   block: IndexerTendermintBlock,
+  blockEventIndex: number,
   indexerTendermintEvent: IndexerTendermintEvent,
   txId: number,
   event: EventMessage,
@@ -44,16 +45,19 @@ export abstract class Handler<T> {
   indexerTendermintEvent: IndexerTendermintEvent;
   timestamp: DateTime;
   txId: number;
+  blockEventIndex: number;
   event: T;
   abstract eventType: string;
 
   constructor(
     block: IndexerTendermintBlock,
+    blockEventIndex: number,
     indexerTendermintEvent: IndexerTendermintEvent,
     txId: number,
     event: T,
   ) {
     this.block = block;
+    this.blockEventIndex = blockEventIndex;
     this.indexerTendermintEvent = indexerTendermintEvent;
     this.timestamp = DateTime.fromJSDate(block.time!);
     this.txId = txId;
@@ -76,10 +80,10 @@ export abstract class Handler<T> {
   /**
    * Handle the event and export timing stats
    */
-  public async handle(): Promise<ConsolidatedKafkaEvent[]> {
+  public async handle(resultRow: pg.QueryResultRow | undefined): Promise<ConsolidatedKafkaEvent[]> {
     const start: number = Date.now();
     try {
-      return await this.internalHandle(undefined);
+      return await this.internalHandle(resultRow);
     } finally {
       stats.timing(
         `${config.SERVICE_NAME}.handle_event.timing`,

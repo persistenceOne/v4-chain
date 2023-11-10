@@ -100,6 +100,7 @@ describe('syncHandler', () => {
       const txId: number = await Transaction.start();
       const assetHandler = new AssetCreationHandler(
         block,
+          1,
         defaultAssetEvent,
         txId,
         defaultAssetCreateEvent,
@@ -107,6 +108,7 @@ describe('syncHandler', () => {
 
       const marketHandler = new MarketCreateHandler(
         block,
+          0,
         defaultMarketEvent,
         txId,
         defaultMarketCreate,
@@ -132,7 +134,7 @@ describe('syncHandler', () => {
 
       expect(markets.length).toEqual(0);
       const kafkaPublisher: KafkaPublisher = new KafkaPublisher();
-      await synchHandlers.process(kafkaPublisher);
+      await synchHandlers.process(kafkaPublisher, undefined);
       await Transaction.commit(txId);
 
       // check that assets/markets are populated

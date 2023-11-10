@@ -184,6 +184,7 @@ describe('LiquidationHandler', () => {
 
       const handler: LiquidationHandler = new LiquidationHandler(
         block,
+          0,
         indexerTendermintEvent,
         0,
         {
@@ -240,6 +241,7 @@ describe('LiquidationHandler', () => {
       goodTilOneof: Partial<IndexerOrder>,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_LIQUIDATION_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
       const eventIndex: number = 0;
@@ -483,6 +485,7 @@ describe('LiquidationHandler', () => {
       existingGoodTilBlock?: string,
       existingGoodTilBlockTime?: string,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_LIQUIDATION_HANDLER_SQL_FUNCTION = useSqlFunction;
 
       // create initial orders
@@ -696,6 +699,7 @@ describe('LiquidationHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_LIQUIDATION_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
       const eventIndex: number = 0;

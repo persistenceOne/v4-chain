@@ -124,21 +124,23 @@ export class LiquidationHandler extends AbstractOrderFillHandler<OrderFillWithLi
         });
         throw error;
       });
-      resultRow = result.rows[0].result;
+      resultRow = {
+        [field]: result.rows[0].result,
+      };
     }
 
     const fill: FillFromDatabase = FillModel.fromJson(
-        resultRow!.fill) as FillFromDatabase;
+        resultRow![field].fill) as FillFromDatabase;
     const perpetualMarket: PerpetualMarketFromDatabase = PerpetualMarketModel.fromJson(
-        resultRow!.perpetual_market) as PerpetualMarketFromDatabase;
+        resultRow![field].perpetual_market) as PerpetualMarketFromDatabase;
     const position: PerpetualPositionFromDatabase = PerpetualPositionModel.fromJson(
-        resultRow!.perpetual_position) as PerpetualPositionFromDatabase;
+        resultRow![field].perpetual_position) as PerpetualPositionFromDatabase;
 
     if (this.event.liquidity === Liquidity.MAKER) {
       // Must be done in this order, because fills refer to an order
       // We do not create a taker order for liquidations.
       const makerOrder: OrderFromDatabase = OrderModel.fromJson(
-        resultRow!.order) as OrderFromDatabase;
+          resultRow![field].order) as OrderFromDatabase;
 
       // Update the cache tracking the state-filled amount per order for use in vulcan
       await StateFilledQuantumsCache.updateStateFilledQuantums(

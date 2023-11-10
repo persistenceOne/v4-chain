@@ -5,6 +5,7 @@ import config from '../config';
 import { Handler } from '../handlers/handler';
 import { KafkaPublisher } from './kafka-publisher';
 import { ConsolidatedKafkaEvent, DydxIndexerSubtypes, EventMessage } from './types';
+import * as pg from 'pg';
 
 // type alias for an array of handlers.
 type HandlerBatch = Handler<EventMessage>[];
@@ -60,7 +61,7 @@ export class SyncHandlers {
    * Adds events to the kafkaPublisher.
    */
   public async process(
-    kafkaPublisher: KafkaPublisher,
+    kafkaPublisher: KafkaPublisher, result: pg.QueryResultRow | undefined
   ): Promise<void> {
     const start: number = Date.now();
     const handlerCountMapping: { [key: string]: number } = {};
@@ -71,7 +72,7 @@ export class SyncHandlers {
         handlerCountMapping[handlerName] = 0;
       }
       handlerCountMapping[handlerName] += 1;
-      const events: ConsolidatedKafkaEvent[] = await handler.handle();
+      const events: ConsolidatedKafkaEvent[] = await handler.handle(result ? result[handler.blockEventIndex] : undefined);
       consolidatedKafkaEventGroup.push(events);
     }
 

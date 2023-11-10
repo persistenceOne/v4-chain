@@ -96,6 +96,7 @@ describe('perpetualMarketHandler', () => {
 
       const handler: PerpetualMarketCreationHandler = new PerpetualMarketCreationHandler(
         block,
+          0,
         indexerTendermintEvent,
         0,
         defaultPerpetualMarketCreateEvent,
@@ -120,6 +121,7 @@ describe('perpetualMarketHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_PERPETUAL_MARKET_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
       const kafkaMessage: KafkaMessage = createKafkaMessageFromPerpetualMarketEvent({
@@ -148,6 +150,7 @@ describe('perpetualMarketHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_PERPETUAL_MARKET_HANDLER_SQL_FUNCTION = useSqlFunction;
       await MarketTable.create(testConstants.defaultMarket);
       await marketRefresher.updateMarkets();
@@ -178,6 +181,7 @@ describe('perpetualMarketHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_PERPETUAL_MARKET_HANDLER_SQL_FUNCTION = useSqlFunction;
       await Promise.all([
         MarketTable.create(testConstants.defaultMarket),

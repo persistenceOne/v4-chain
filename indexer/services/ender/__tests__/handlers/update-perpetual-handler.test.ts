@@ -82,6 +82,7 @@ describe('update-perpetual-handler', () => {
 
       const handler: UpdatePerpetualHandler = new UpdatePerpetualHandler(
         block,
+          0,
         indexerTendermintEvent,
         0,
         defaultUpdatePerpetualEvent,
@@ -106,6 +107,7 @@ describe('update-perpetual-handler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_UPDATE_PERPETUAL_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
       const kafkaMessage: KafkaMessage = createKafkaMessageFromUpdatePerpetualEvent({

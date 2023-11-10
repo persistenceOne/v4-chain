@@ -91,6 +91,7 @@ describe('assetHandler', () => {
 
       const handler: AssetCreationHandler = new AssetCreationHandler(
         block,
+          0,
         indexerTendermintEvent,
         0,
         defaultAssetCreateEvent,
@@ -115,6 +116,7 @@ describe('assetHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_ASSET_CREATE_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
       const kafkaMessage: KafkaMessage = createKafkaMessageFromAssetEvent({
@@ -145,6 +147,7 @@ describe('assetHandler', () => {
       _name: string,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_ASSET_CREATE_HANDLER_SQL_FUNCTION = useSqlFunction;
       await MarketTable.create(testConstants.defaultMarket);
       await marketRefresher.updateMarkets();

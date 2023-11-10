@@ -1,6 +1,19 @@
 /* eslint-disable max-len */
 import { logger } from '@dydxprotocol-indexer/base';
-import { IndexerTendermintBlock, IndexerTendermintEvent } from '@dydxprotocol-indexer/v4-protos';
+import {
+  AssetCreateEventV1, DeleveragingEventV1, FundingEventV1,
+  IndexerTendermintBlock,
+  IndexerTendermintEvent,
+  IndexerTendermintEvent_BlockEvent, LiquidityTierUpsertEventV1,
+  MarketEventV1,
+  OrderFillEventV1, PerpetualMarketCreateEventV1,
+  StatefulOrderEventV1,
+  SubaccountUpdateEventV1,
+  TransferEventV1, UpdateClobPairEventV1, UpdatePerpetualEventV1
+} from '@dydxprotocol-indexer/v4-protos';
+import {
+  storeHelpers,
+} from '@dydxprotocol-indexer/postgres';
 import _ from 'lodash';
 
 import { Handler } from '../handlers/handler';
@@ -24,6 +37,9 @@ import { SyncHandlers, SYNCHRONOUS_SUBTYPES } from './sync-handlers';
 import {
   DydxIndexerSubtypes, EventMessage, EventProtoWithTypeAndVersion, GroupedEvents,
 } from './types';
+import config from '../config';
+import * as pg from 'pg';
+import {SUBACCOUNT_ORDER_FILL_EVENT_TYPE} from "../constants";
 
 const TXN_EVENT_SUBTYPE_VERSION_TO_VALIDATOR_MAPPING: Record<string, ValidatorInitializer> = {
   [serializeSubtypeAndVersion(DydxIndexerSubtypes.ORDER_FILL.toString(), 1)]: OrderFillValidator,
@@ -48,6 +64,15 @@ function serializeSubtypeAndVersion(
   version: number,
 ): string {
   return `${subtype}-${version}`;
+}
+
+type DecodedIndexerTendermintBlock = Omit<IndexerTendermintBlock, 'events'> & {
+  events: DecodedIndexerTendermintEvent[];
+}
+
+type DecodedIndexerTendermintEvent = Omit<IndexerTendermintEvent, 'dataBytes'> & {
+  /** Decoded tendermint event. */
+  dataBytes: object;
 }
 
 export class BlockProcessor {
@@ -101,22 +126,25 @@ export class BlockProcessor {
       groupedEvents.transactionEvents.push([]);
     }
 
-    _.forEach(this.block.events, (event: IndexerTendermintEvent) => {
+    for (let i: number = 0; i < this.block.events.length; i++) {
+      const event: IndexerTendermintEvent = this.block.events[i];
       const transactionIndex: number = indexerTendermintEventToTransactionIndex(event);
       const eventProtoWithType:
       EventProtoWithTypeAndVersion | undefined = indexerTendermintEventToEventProtoWithType(
+        i,
         event,
       );
       if (eventProtoWithType === undefined) {
-        return;
+        continue;
       }
+      eventProtoWithType.blockEventIndex = i;
       if (transactionIndex === -1) {
         groupedEvents.blockEvents.push(eventProtoWithType);
-        return;
+        continue;
       }
 
       groupedEvents.transactionEvents[transactionIndex].push(eventProtoWithType);
-    });
+    };
     return groupedEvents;
   }
 
@@ -168,6 +196,7 @@ export class BlockProcessor {
     const validator: Validator<EventMessage> = new Initializer(
       eventProto.eventProto,
       this.block,
+      eventProto.blockEventIndex,
     );
 
     validator.validate();
@@ -189,12 +218,110 @@ export class BlockProcessor {
     const kafkaPublisher: KafkaPublisher = new KafkaPublisher();
     // in genesis, handle sync events first, then batched events.
     // in other blocks, handle batched events first, then sync events.
+    let resultRow: pg.QueryResultRow | undefined = undefined;
+    if (config.USE_BLOCK_PROCESSOR_SQL_FUNCTION) {
+      const decodedBlock: DecodedIndexerTendermintBlock = {
+        ...this.block,
+        events: [],
+      }
+      for (let event of this.block.events) {
+        switch (event.subtype) {
+          case DydxIndexerSubtypes.ORDER_FILL:
+            decodedBlock.events.push({
+              ...event,
+              dataBytes: OrderFillEventV1.decode(event.dataBytes),
+            });
+            break;
+          case DydxIndexerSubtypes.SUBACCOUNT_UPDATE:
+            decodedBlock.events.push({
+              ...event,
+              dataBytes: SubaccountUpdateEventV1.decode(event.dataBytes),
+            });
+            break;
+          case DydxIndexerSubtypes.TRANSFER:
+            decodedBlock.events.push({
+              ...event,
+              dataBytes: TransferEventV1.decode(event.dataBytes),
+            });
+            break;
+          case DydxIndexerSubtypes.MARKET:
+            decodedBlock.events.push({
+              ...event,
+              dataBytes: MarketEventV1.decode(event.dataBytes),
+            });
+            break;
+          case DydxIndexerSubtypes.STATEFUL_ORDER:
+            decodedBlock.events.push({
+              ...event,
+              dataBytes: StatefulOrderEventV1.decode(event.dataBytes),
+            });
+            break;
+          case DydxIndexerSubtypes.FUNDING:
+            decodedBlock.events.push({
+              ...event,
+              dataBytes: FundingEventV1.decode(event.dataBytes),
+            });
+            break;
+          case DydxIndexerSubtypes.ASSET:
+            decodedBlock.events.push({
+              ...event,
+              dataBytes: AssetCreateEventV1.decode(event.dataBytes),
+            });
+            break;
+          case DydxIndexerSubtypes.PERPETUAL_MARKET:
+            decodedBlock.events.push({
+              ...event,
+              dataBytes: PerpetualMarketCreateEventV1.decode(event.dataBytes),
+            });
+            break;
+          case DydxIndexerSubtypes.LIQUIDITY_TIER:
+            decodedBlock.events.push({
+              ...event,
+              dataBytes: LiquidityTierUpsertEventV1.decode(event.dataBytes),
+            });
+            break;
+          case DydxIndexerSubtypes.UPDATE_PERPETUAL:
+            decodedBlock.events.push({
+              ...event,
+              dataBytes: UpdatePerpetualEventV1.decode(event.dataBytes),
+            });
+            break;
+          case DydxIndexerSubtypes.UPDATE_CLOB_PAIR:
+            decodedBlock.events.push({
+              ...event,
+              dataBytes: UpdateClobPairEventV1.decode(event.dataBytes),
+            });
+            break;
+          case DydxIndexerSubtypes.DELEVERAGING:
+            decodedBlock.events.push({
+              ...event,
+              dataBytes: DeleveragingEventV1.decode(event.dataBytes),
+            });
+            break;
+        }
+      }
+      const result: pg.QueryResult = await storeHelpers.rawQuery(
+          `SELECT dydx_block_processor(
+        '${JSON.stringify(decodedBlock)}' 
+      ) AS result;`,
+          {txId: this.txId},
+      ).catch((error: Error) => {
+        logger.error({
+          at: 'BlockProcessor#processEvents',
+          message: 'Failed to handle IndexerTendermintBlock',
+          error,
+        });
+        throw error;
+      });
+      resultRow = result.rows[0].result;
+    }
+
     if (this.block.height === 0) {
-      await this.syncHandlers.process(kafkaPublisher);
-      await this.batchedHandlers.process(kafkaPublisher);
+      await this.syncHandlers.process(kafkaPublisher, resultRow);
+      await this.batchedHandlers.process(kafkaPublisher, resultRow);
     } else {
-      await this.batchedHandlers.process(kafkaPublisher);
-      await this.syncHandlers.process(kafkaPublisher);
+      await this.batchedHandlers.process(kafkaPublisher, resultRow);
+      await this.syncHandlers.process(kafkaPublisher, resultRow);
     }
     return kafkaPublisher;
   }

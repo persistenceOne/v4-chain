@@ -99,6 +99,7 @@ describe('conditionalOrderTriggeredHandler', () => {
 
       const handler: ConditionalOrderTriggeredHandler = new ConditionalOrderTriggeredHandler(
         block,
+          0,
         indexerTendermintEvent,
         0,
         defaultStatefulOrderEvent,
@@ -118,6 +119,7 @@ describe('conditionalOrderTriggeredHandler', () => {
     _name: string,
     useSqlFunction: boolean,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_STATEFUL_ORDER_HANDLER_SQL_FUNCTION = useSqlFunction;
     await OrderTable.create({
       ...testConstants.defaultOrderGoodTilBlockTime,
@@ -167,6 +169,7 @@ describe('conditionalOrderTriggeredHandler', () => {
     _name: string,
     useSqlFunction: boolean,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_STATEFUL_ORDER_HANDLER_SQL_FUNCTION = useSqlFunction;
     const kafkaMessage: KafkaMessage = createKafkaMessageFromStatefulOrderEvent(
       defaultStatefulOrderEvent,

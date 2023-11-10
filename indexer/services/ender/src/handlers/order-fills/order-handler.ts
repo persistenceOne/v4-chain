@@ -105,16 +105,18 @@ export class OrderHandler extends AbstractOrderFillHandler<OrderFillWithLiquidit
         });
         throw error;
       });
-      resultRow = result.rows[0].result;
+      resultRow = {
+        [field]: result.rows[0].result,
+      };
     }
     const order: OrderFromDatabase = OrderModel.fromJson(
-        resultRow!.order) as OrderFromDatabase;
+        resultRow![field].order) as OrderFromDatabase;
     const fill: FillFromDatabase = FillModel.fromJson(
-        resultRow!.fill) as FillFromDatabase;
+        resultRow![field].fill) as FillFromDatabase;
     const perpetualMarket: PerpetualMarketFromDatabase = PerpetualMarketModel.fromJson(
-        resultRow!.perpetual_market) as PerpetualMarketFromDatabase;
+        resultRow![field].perpetual_market) as PerpetualMarketFromDatabase;
     const position: PerpetualPositionFromDatabase = PerpetualPositionModel.fromJson(
-        resultRow!.perpetual_position) as PerpetualPositionFromDatabase;
+        resultRow![field].perpetual_position) as PerpetualPositionFromDatabase;
 
     let subaccountId: IndexerSubaccountId;
     if (this.event.liquidity === Liquidity.MAKER) {

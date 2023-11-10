@@ -30,6 +30,7 @@ const scripts: string[] = [
   'create_extension_pg_stat_statements.sql',
   'create_extension_uuid_ossp.sql',
   'dydx_asset_create_handler.sql',
+  'dydx_block_processor.sql',
   'dydx_clob_pair_status_to_market_status.sql',
   'dydx_deleveraging_handler.sql',
   'dydx_market_create_handler.sql',

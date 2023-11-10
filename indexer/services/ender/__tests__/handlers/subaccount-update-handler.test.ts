@@ -132,6 +132,7 @@ describe('subaccountUpdateHandler', () => {
 
       const handler: SubaccountUpdateHandler = new SubaccountUpdateHandler(
         block,
+          0,
         indexerTendermintEvent,
         0,
         defaultEmptySubaccountUpdate,
@@ -151,6 +152,7 @@ describe('subaccountUpdateHandler', () => {
     _name: string,
     useSqlFunction: boolean,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_SUBACCOUNT_UPDATE_SQL_FUNCTION = useSqlFunction;
     const transactionIndex: number = 0;
     const address: string = 'cosmosnewaddress';
@@ -205,6 +207,7 @@ describe('subaccountUpdateHandler', () => {
     settledFunding: string,
     useSqlFunction: boolean,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_SUBACCOUNT_UPDATE_SQL_FUNCTION = useSqlFunction;
     const transactionIndex: number = 0;
     const eventIndex: number = 0;
@@ -292,6 +295,7 @@ describe('subaccountUpdateHandler', () => {
     settledFunding: string,
     useSqlFunction: boolean,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_SUBACCOUNT_UPDATE_SQL_FUNCTION = useSqlFunction;
     const transactionIndex: number = 0;
     const sizeInQuantums: number = 1_000_000;
@@ -358,6 +362,7 @@ describe('subaccountUpdateHandler', () => {
     _name: string,
     useSqlFunction: boolean,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_SUBACCOUNT_UPDATE_SQL_FUNCTION = useSqlFunction;
     const transactionIndex: number = 0;
     const sizeInQuantums: number = 1_000_000;
@@ -447,6 +452,7 @@ describe('subaccountUpdateHandler', () => {
     _name: string,
     useSqlFunction: boolean,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_SUBACCOUNT_UPDATE_SQL_FUNCTION = useSqlFunction;
     const transactionIndex: number = 0;
     const sizeInQuantums: number = 1_000_000;
@@ -504,6 +510,7 @@ describe('subaccountUpdateHandler', () => {
     sizeInQuantums: number,
     useSqlFunction: boolean,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_SUBACCOUNT_UPDATE_SQL_FUNCTION = useSqlFunction;
     const transactionIndex: number = 0;
     const subaccountUpdateEvent: SubaccountUpdateEventV1 = SubaccountUpdateEventV1.fromPartial({
@@ -574,6 +581,7 @@ describe('subaccountUpdateHandler', () => {
     _name: string,
     useSqlFunction: boolean,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_SUBACCOUNT_UPDATE_SQL_FUNCTION = useSqlFunction;
     const transactionIndex: number = 0;
     const sizeInQuantums: number = 1_000_000;
@@ -647,6 +655,7 @@ describe('subaccountUpdateHandler', () => {
     _name: string,
     useSqlFunction: boolean,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_SUBACCOUNT_UPDATE_SQL_FUNCTION = useSqlFunction;
     const transactionIndex: number = 0;
     const eventIndex: number = 0;

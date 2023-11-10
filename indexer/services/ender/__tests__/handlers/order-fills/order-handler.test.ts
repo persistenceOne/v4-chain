@@ -184,6 +184,7 @@ describe('OrderHandler', () => {
 
       const handler: OrderHandler = new OrderHandler(
         block,
+          0,
         indexerTendermintEvent,
         0,
         {
@@ -251,6 +252,7 @@ describe('OrderHandler', () => {
       takerGoodTilOneof: Partial<IndexerOrder>,
       useSqlFunction: boolean,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_ORDER_HANDLER_SQL_FUNCTION = useSqlFunction;
       const transactionIndex: number = 0;
       const eventIndex: number = 0;
@@ -585,6 +587,7 @@ describe('OrderHandler', () => {
       existingGoodTilBlock?: string,
       existingGoodTilBlockTime?: string,
     ) => {
+      config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
       config.USE_ORDER_HANDLER_SQL_FUNCTION = useSqlFunction;
       if (isOrderCanceled) {
         await CanceledOrdersCache.addCanceledOrderId(
@@ -869,6 +872,7 @@ describe('OrderHandler', () => {
     _name: string,
     useSqlFunction: boolean,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_ORDER_HANDLER_SQL_FUNCTION = useSqlFunction;
     const transactionIndex: number = 0;
     const eventIndex: number = 0;
@@ -1080,6 +1084,7 @@ describe('OrderHandler', () => {
     _name: string,
     useSqlFunction: boolean,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_ORDER_HANDLER_SQL_FUNCTION = useSqlFunction;
     const transactionIndex: number = 0;
     const eventIndex: number = 0;
@@ -1401,6 +1406,7 @@ describe('OrderHandler', () => {
     _name: string,
     useSqlFunction: boolean,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_ORDER_HANDLER_SQL_FUNCTION = useSqlFunction;
     const transactionIndex: number = 0;
     const eventIndex: number = 0;
@@ -1541,6 +1547,7 @@ describe('OrderHandler', () => {
     // either BEST_EFFORT_CANCELED or CANCELED
     status: OrderStatus = OrderStatus.BEST_EFFORT_CANCELED,
   ) => {
+    config.USE_BLOCK_PROCESSOR_SQL_FUNCTION = useSqlFunction;
     config.USE_ORDER_HANDLER_SQL_FUNCTION = useSqlFunction;
     const transactionIndex: number = 0;
     const eventIndex: number = 0;

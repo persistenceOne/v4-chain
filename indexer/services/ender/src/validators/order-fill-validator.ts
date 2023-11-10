@@ -82,7 +82,8 @@ export class OrderFillValidator extends Validator<OrderFillEventV1> {
       (orderFillEventWithLiquidity: OrderFillEventWithLiquidity) => {
         return new Initializer(
           this.block,
-          indexerTendermintEvent,
+            this.blockEventIndex,
+            indexerTendermintEvent,
           txId,
           orderFillEventV1ToOrderFill(orderFillEventWithLiquidity),
         );
