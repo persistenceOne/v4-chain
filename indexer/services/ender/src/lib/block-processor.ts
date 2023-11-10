@@ -1,5 +1,5 @@
 /* eslint-disable max-len */
-import { logger } from '@dydxprotocol-indexer/base';
+import {logger, stats, STATS_NO_SAMPLING} from '@dydxprotocol-indexer/base';
 import {
   AssetCreateEventV1, DeleveragingEventV1, FundingEventV1,
   IndexerTendermintBlock,
@@ -300,20 +300,40 @@ export class BlockProcessor {
             break;
         }
       }
-      const result: pg.QueryResult = await storeHelpers.rawQuery(
-          `SELECT dydx_block_processor(
+      const startQuery: number = Date.now();
+     const query: string =           `SELECT dydx_block_processor(
         '${JSON.stringify(decodedBlock)}' 
-      ) AS result;`,
-          {txId: this.txId},
-      ).catch((error: Error) => {
-        logger.error({
-          at: 'BlockProcessor#processEvents',
-          message: 'Failed to handle IndexerTendermintBlock',
-          error,
-        });
-        throw error;
-      });
-      resultRow = result.rows[0].result;
+      ) AS result;`;
+      stats.timing(
+          `${config.SERVICE_NAME}.processed_block_query_conversion.timing`,
+          Date.now() - startQuery,
+          STATS_NO_SAMPLING,
+          {success: true.toString()},
+      );
+      const start: number = Date.now();
+      let success = false;
+     try {
+       const result: pg.QueryResult = await storeHelpers.rawQuery(
+           query,
+           {txId: this.txId},
+       ).catch((error: Error) => {
+         logger.error({
+           at: 'BlockProcessor#processEvents',
+           message: 'Failed to handle IndexerTendermintBlock',
+           error,
+         });
+         throw error;
+       });
+       resultRow = result.rows[0].result;
+       success = true;
+     } finally {
+       stats.timing(
+           `${config.SERVICE_NAME}.processed_block_sql.timing`,
+           Date.now() - start,
+           STATS_NO_SAMPLING,
+           {success: success.toString()},
+       );
+     }
     }
 
     if (this.block.height === 0) {
