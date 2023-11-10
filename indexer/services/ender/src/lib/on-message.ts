@@ -75,11 +75,13 @@ export async function onMessage(message: KafkaMessage): Promise<void> {
   try {
     validateIndexerTendermintBlock(indexerTendermintBlock);
 
-    await createInitialRows(
-      blockHeight,
-      txId,
-      indexerTendermintBlock,
-    );
+    if (!config.USE_BLOCK_PROCESSOR_SQL_FUNCTION) {
+      await createInitialRows(
+        blockHeight,
+        txId,
+        indexerTendermintBlock,
+      );
+    }
     const blockProcessor: BlockProcessor = new BlockProcessor(
       indexerTendermintBlock,
       txId,
@@ -265,14 +267,11 @@ async function createInitialRowsViaSqlFunction(
   txId: number,
   block: IndexerTendermintBlock,
 ): Promise<void> {
-  const txHashesString = block.txHashes.length > 0 ? `ARRAY['${block.txHashes.join("','")}']::text[]` : 'null';
-  const eventsString = block.events.length > 0 ? `ARRAY['${block.events.map((event) => JSON.stringify(event)).join("','")}']::jsonb[]` : 'null';
-
   const queryString: string = `SELECT dydx_create_initial_rows_for_tendermint_block(
-      '${blockHeight}'::text, 
-      '${block.time!.toISOString()}'::text,
-      ${txHashesString},
-      ${eventsString}
+      ${blockHeight},
+      '${block.time!.toISOString()}',
+      '${JSON.stringify(block.txHashes)}',
+      '${JSON.stringify(block.events)}'
   ) AS result;`;
   await storeHelpers.rawQuery(
     queryString,

@@ -10,6 +10,8 @@ DECLARE
     transaction_index int;
     event_data jsonb;
 BEGIN
+    PERFORM dydx_create_initial_rows_for_tendermint_block(block_height, block_time, block->'txHashes', block->'events');
+
     rval = ARRAY[jsonb_array_length(block->'events')];
 
     /** Batch handlers */
