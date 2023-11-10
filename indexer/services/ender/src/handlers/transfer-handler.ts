@@ -44,8 +44,9 @@ export class TransferHandler extends Handler<TransferEventV1> {
       this.indexerTendermintEvent,
     );
     const eventDataBinary: Uint8Array = this.indexerTendermintEvent.dataBytes;
-    const result: pg.QueryResult = await storeHelpers.rawQuery(
-      `SELECT dydx_transfer_handler(
+    if (resultRow === undefined) {
+      const result: pg.QueryResult = await storeHelpers.rawQuery(
+          `SELECT dydx_transfer_handler(
         ${this.block.height},
         '${this.block.time?.toISOString()}',
         '${JSON.stringify(TransferEventV1.decode(eventDataBinary))}',
@@ -53,21 +54,23 @@ export class TransferHandler extends Handler<TransferEventV1> {
         ${transactionIndex},
         '${this.block.txHashes[transactionIndex]}'
       ) AS result;`,
-      { txId: this.txId },
-    ).catch((error: Error) => {
-      logger.error({
-        at: 'TransferHandler#handleViaSqlFunction',
-        message: 'Failed to handle TransferEventV1',
-        error,
-      });
+          {txId: this.txId},
+      ).catch((error: Error) => {
+        logger.error({
+          at: 'TransferHandler#handleViaSqlFunction',
+          message: 'Failed to handle TransferEventV1',
+          error,
+        });
 
-      throw error;
-    });
+        throw error;
+      });
+      resultRow = result.rows[0].result;
+    }
 
     const asset: AssetFromDatabase = AssetModel.fromJson(
-      result.rows[0].result.asset) as AssetFromDatabase;
+      resultRow!.asset) as AssetFromDatabase;
     const transfer: TransferFromDatabase = TransferModel.fromJson(
-      result.rows[0].result.transfer) as TransferFromDatabase;
+        resultRow!.transfer) as TransferFromDatabase;
     return this.generateKafkaEvents(
       transfer,
       asset,
