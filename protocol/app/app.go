@@ -684,9 +684,6 @@ func New(
 					)
 				}
 			}()
-			// Don't panic if metrics daemon loops are delayed. Use maximum value.
-			// TODO(CORE-666): Refactor metrics daemon and track health here
-			// app.MonitorDaemon(app.MetricsDaemon, MaximumDaemonUnhealthyDuration)
 			metricsclient.Start(
 				// The client will use `context.Background` so that it can have a different context from
 				// the main application.
