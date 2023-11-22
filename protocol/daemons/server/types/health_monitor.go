@@ -72,6 +72,8 @@ type healthChecker struct {
 	// remain unhealthy. If the service remains unhealthy for this duration, the monitor will execute the
 	// specified callback function.
 	maximumAcceptableUnhealthyDuration time.Duration
+
+	logger log.Logger
 }
 
 // Poll executes a health check for the health checkable service. If the service has been unhealthy for longer than the
@@ -89,6 +91,19 @@ func (hc *healthChecker) Poll() {
 		// Capture the timestamp of the first failure in a new streak.
 		hc.firstFailureInStreak.Update(now, err)
 	}
+	hc.logger.Info(
+		"QQQQQQ Polling health checker",
+		"service",
+		hc.healthCheckable.ServiceName(),
+		"err",
+		err,
+		"mostRecentSuccess",
+		hc.mostRecentSuccess,
+		"firstFailureInStreak",
+		hc.firstFailureInStreak.Timestamp(),
+		"maximumAcceptableUnhealthyDuration",
+		hc.maximumAcceptableUnhealthyDuration,
+	)
 
 	// If the service has been unhealthy for longer than the maximum acceptable unhealthy duration, execute the
 	// callback function.
@@ -113,6 +128,7 @@ func StartNewHealthChecker(
 	timeProvider libtime.TimeProvider,
 	maximumAcceptableUnhealthyDuration time.Duration,
 	startupGracePeriod time.Duration,
+	logger log.Logger,
 ) *healthChecker {
 	checker := &healthChecker{
 		healthCheckable:                    healthCheckable,
@@ -120,9 +136,11 @@ func StartNewHealthChecker(
 		unhealthyCallback:                  unhealthyCallback,
 		timeProvider:                       timeProvider,
 		maximumAcceptableUnhealthyDuration: maximumAcceptableUnhealthyDuration,
+		logger:                             logger,
 	}
 	// The first poll is scheduled after the startup grace period to allow the service to initialize.
 	checker.timer = time.AfterFunc(startupGracePeriod, checker.Poll)
+	logger.Info("QQQQQQ Starting health checker", "service", healthCheckable.ServiceName())
 
 	return checker
 }
@@ -143,9 +161,13 @@ type HealthMonitor struct {
 	lock sync.Mutex
 
 	// These fields are initialized in NewHealthMonitor and are not modified after initialization.
-	logger             log.Logger
+	logger log.Logger
+	// startupGracePeriod is the grace period before the monitor starts polling the health checkable services.
 	startupGracePeriod time.Duration
-	pollingFrequency   time.Duration
+	// pollingFrequency is the frequency at which the health checkable services are polled.
+	pollingFrequency time.Duration
+	// disablePanics is used to downgrade panics to error logs as the default behavior for registering a daemon.
+	disablePanics bool
 }
 
 // NewHealthMonitor creates a new health monitor.
@@ -153,12 +175,14 @@ func NewHealthMonitor(
 	startupGracePeriod time.Duration,
 	pollingFrequency time.Duration,
 	logger log.Logger,
+	disablePanics bool,
 ) *HealthMonitor {
 	return &HealthMonitor{
 		serviceToHealthChecker: make(map[string]*healthChecker),
 		logger:                 logger.With(cosmoslog.ModuleKey, "health-monitor"),
 		startupGracePeriod:     startupGracePeriod,
 		pollingFrequency:       pollingFrequency,
+		disablePanics:          disablePanics,
 	}
 }
 
@@ -181,6 +205,8 @@ func (hm *HealthMonitor) RegisterServiceWithCallback(
 ) error {
 	hm.lock.Lock()
 	defer hm.lock.Unlock()
+
+	hm.logger.Info("QQQQQQ Registering health checker", "service", hc.ServiceName())
 
 	if maximumAcceptableUnhealthyDuration <= 0 {
 		return fmt.Errorf(
@@ -206,9 +232,13 @@ func (hm *HealthMonitor) RegisterServiceWithCallback(
 		)
 	}
 
+	hm.logger.Info("QQQQQQ Registering health checker... checking for duplicates", "service", hc.ServiceName())
+
 	if _, ok := hm.serviceToHealthChecker[hc.ServiceName()]; ok {
 		return fmt.Errorf("service %v already registered", hc.ServiceName())
 	}
+
+	hm.logger.Info("QQQQQQ Registering health checker... creating new health checker", "service", hc.ServiceName())
 
 	hm.serviceToHealthChecker[hc.ServiceName()] = StartNewHealthChecker(
 		hc,
@@ -217,6 +247,7 @@ func (hm *HealthMonitor) RegisterServiceWithCallback(
 		&libtime.TimeProviderImpl{},
 		maximumAcceptableUnhealthyDuration,
 		hm.startupGracePeriod,
+		hm.logger,
 	)
 	return nil
 }
@@ -252,6 +283,15 @@ func (hm *HealthMonitor) RegisterService(
 	hc types.HealthCheckable,
 	maximumAcceptableUnhealthyDuration time.Duration,
 ) error {
+	// If panics have been disabled, register the service with a callback that logs an error without panicking.
+	if hm.disablePanics {
+		return hm.RegisterServiceWithCallback(
+			hc,
+			maximumAcceptableUnhealthyDuration,
+			LogErrorServiceNotResponding(hc, hm.logger),
+		)
+	}
+
 	return hm.RegisterServiceWithCallback(
 		hc,
 		maximumAcceptableUnhealthyDuration,

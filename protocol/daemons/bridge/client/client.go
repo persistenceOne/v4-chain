@@ -133,7 +133,8 @@ func StartBridgeDaemonTaskLoop(
 				queryClient,
 				serviceClient,
 			); err == nil {
-				c.ReportSuccess()
+				// c.ReportSuccess()
+				c.ReportFailure(fmt.Errorf("fake error!"))
 			} else {
 				// TODO(DEC-947): Move daemon shutdown to application.
 				c.logger.Error("Bridge daemon returned error", "error", err)
