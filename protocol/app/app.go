@@ -629,7 +629,6 @@ func New(
 
 		// Non-validating full-nodes have no need to run the price daemon.
 		if !appFlags.NonValidatingFullNode && daemonFlags.Price.Enabled {
-			app.MonitorDaemon(app.PriceFeedClient, MaximumDaemonUnhealthyDuration)
 			exchangeQueryConfig := constants.StaticExchangeQueryConfig
 			// Start pricefeed client for sending prices for the pricefeed server to consume. These prices
 			// are retrieved via third-party APIs like Binance and then are encoded in-memory and
@@ -646,6 +645,7 @@ func New(
 				constants.StaticExchangeDetails,
 				&pricefeedclient.SubTaskRunnerImpl{},
 			)
+			app.MonitorDaemon(app.PriceFeedClient, MaximumDaemonUnhealthyDuration)
 		}
 
 		// Start Bridge Daemon.
