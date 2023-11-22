@@ -78,6 +78,11 @@ func newClient(logger log.Logger) *Client {
 	return client
 }
 
+// ServiceName returns the name of the pricefeed daemon service.
+func (c *Client) ServiceName() string {
+	return constants.PricefeedDaemonModuleName
+}
+
 // newTickerWithStop creates a new ticker and a channel for iteratively looping through a subtask with a stop signal
 // for any subtask kicked off by the client. The ticker and channel are tracked in order to properly clean up and send
 // all needed stop signals when the daemon is stopped.

@@ -39,6 +39,11 @@ func NewClient(logger log.Logger) *Client {
 	}
 }
 
+// ServiceName returns the name of the bridge daemon service.
+func (c *Client) ServiceName() string {
+	return constants.BridgeDaemonModuleName
+}
+
 // Start begins a job that periodically runs the RunBridgeDaemonTaskLoop function.
 func (c *Client) Start(
 	ctx context.Context,

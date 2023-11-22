@@ -613,6 +613,7 @@ func New(
 		if daemonFlags.Liquidation.Enabled {
 			app.LiquidationsClient = liquidationclient.NewClient(logger)
 			go func() {
+				app.MonitorDaemon(app.LiquidationsClient, MaximumDaemonUnhealthyDuration)
 				if err := app.LiquidationsClient.Start(
 					// The client will use `context.Background` so that it can have a different context from
 					// the main application.
@@ -623,12 +624,12 @@ func New(
 				); err != nil {
 					panic(err)
 				}
-				app.MonitorDaemon(app.LiquidationsClient, MaximumDaemonUnhealthyDuration)
 			}()
 		}
 
 		// Non-validating full-nodes have no need to run the price daemon.
 		if !appFlags.NonValidatingFullNode && daemonFlags.Price.Enabled {
+			app.MonitorDaemon(app.PriceFeedClient, MaximumDaemonUnhealthyDuration)
 			exchangeQueryConfig := constants.StaticExchangeQueryConfig
 			// Start pricefeed client for sending prices for the pricefeed server to consume. These prices
 			// are retrieved via third-party APIs like Binance and then are encoded in-memory and
@@ -645,7 +646,6 @@ func New(
 				constants.StaticExchangeDetails,
 				&pricefeedclient.SubTaskRunnerImpl{},
 			)
-			app.MonitorDaemon(app.PriceFeedClient, MaximumDaemonUnhealthyDuration)
 		}
 
 		// Start Bridge Daemon.
@@ -655,6 +655,7 @@ func New(
 			// environments.
 			app.BridgeClient = bridgeclient.NewClient(logger)
 			go func() {
+				app.MonitorDaemon(app.BridgeClient, MaximumDaemonUnhealthyDuration)
 				if err := app.BridgeClient.Start(
 					// The client will use `context.Background` so that it can have a different context from
 					// the main application.
@@ -665,7 +666,6 @@ func New(
 				); err != nil {
 					panic(err)
 				}
-				app.MonitorDaemon(app.BridgeClient, MaximumDaemonUnhealthyDuration)
 			}()
 		}
 
