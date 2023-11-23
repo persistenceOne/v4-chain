@@ -23,8 +23,8 @@ const (
 	FlagLiquidationDaemonSubaccountPageLimit = "liquidation-daemon-subaccount-page-limit"
 	FlagLiquidationDaemonRequestChunkSize    = "liquidation-daemon-request-chunk-size"
 
-	FlagDisablePanicOnDaemonFailure            = "disable-panic-on-daemon-failure"
-	FlagMaximumAllowableDaemonUnhealthySeconds = "maximum-allowable-daemon-unhealthy-duration"
+	FlagDisablePanicOnDaemonFailure   = "disable-panic-on-daemon-failure"
+	FlagMaximumDaemonUnhealthySeconds = "maximum-daemon-unhealthy-seconds"
 )
 
 // Shared flags contains configuration flags shared by all daemons.
@@ -33,8 +33,8 @@ type SharedFlags struct {
 	SocketAddress string
 	// DisablePanicOnDaemonFailure toggles whether the daemon should panic on failure.
 	DisablePanicOnDaemonFailure bool
-	// MaximumAllowableDaemonUnhealthySeconds is the maximum allowable duration for which a daemon can be unhealthy.
-	MaximumAllowableDaemonUnhealthySeconds uint32
+	// MaximumDaemonUnhealthySeconds is the maximum allowable duration for which a daemon can be unhealthy.
+	MaximumDaemonUnhealthySeconds uint32
 }
 
 // BridgeFlags contains configuration flags for the Bridge Daemon.
@@ -81,9 +81,9 @@ func GetDefaultDaemonFlags() DaemonFlags {
 	if defaultDaemonFlags == nil {
 		defaultDaemonFlags = &DaemonFlags{
 			Shared: SharedFlags{
-				SocketAddress:                          "/tmp/daemons.sock",
-				DisablePanicOnDaemonFailure:            false,
-				MaximumAllowableDaemonUnhealthySeconds: 5 * 60,
+				SocketAddress:                 "/tmp/daemons.sock",
+				DisablePanicOnDaemonFailure:   false,
+				MaximumDaemonUnhealthySeconds: 5 * 60,
 			},
 			Bridge: BridgeFlags{
 				Enabled:        true,
@@ -127,8 +127,8 @@ func AddDaemonFlagsToCmd(
 		"Disables the default behavior of panicking when a daemon fails.",
 	)
 	cmd.Flags().Uint32(
-		FlagMaximumAllowableDaemonUnhealthySeconds,
-		df.Shared.MaximumAllowableDaemonUnhealthySeconds,
+		FlagMaximumDaemonUnhealthySeconds,
+		df.Shared.MaximumDaemonUnhealthySeconds,
 		"Sets the maximum allowable duration, in seconds, that a daemon can be unhealthy before the app panics.",
 	)
 
@@ -202,9 +202,9 @@ func GetDaemonFlagValuesFromOptions(
 			result.Shared.DisablePanicOnDaemonFailure = v
 		}
 	}
-	if option := appOpts.Get(FlagMaximumAllowableDaemonUnhealthySeconds); option != nil {
+	if option := appOpts.Get(FlagMaximumDaemonUnhealthySeconds); option != nil {
 		if v, err := cast.ToUint32E(option); err == nil {
-			result.Shared.MaximumAllowableDaemonUnhealthySeconds = v
+			result.Shared.MaximumDaemonUnhealthySeconds = v
 		}
 	}
 

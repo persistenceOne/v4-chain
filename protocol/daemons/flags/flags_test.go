@@ -18,7 +18,7 @@ func TestAddDaemonFlagsToCmd(t *testing.T) {
 	tests := []string{
 		flags.FlagUnixSocketAddress,
 		flags.FlagDisablePanicOnDaemonFailure,
-		flags.FlagMaximumAllowableDaemonUnhealthySeconds,
+		flags.FlagMaximumDaemonUnhealthySeconds,
 
 		flags.FlagBridgeDaemonEnabled,
 		flags.FlagBridgeDaemonLoopDelayMs,
@@ -44,7 +44,7 @@ func TestGetDaemonFlagValuesFromOptions_Custom(t *testing.T) {
 
 	optsMap[flags.FlagUnixSocketAddress] = "test-socket-address"
 	optsMap[flags.FlagDisablePanicOnDaemonFailure] = true
-	optsMap[flags.FlagMaximumAllowableDaemonUnhealthySeconds] = uint32(1234)
+	optsMap[flags.FlagMaximumDaemonUnhealthySeconds] = uint32(1234)
 
 	optsMap[flags.FlagBridgeDaemonEnabled] = true
 	optsMap[flags.FlagBridgeDaemonLoopDelayMs] = uint32(1111)
@@ -71,8 +71,8 @@ func TestGetDaemonFlagValuesFromOptions_Custom(t *testing.T) {
 	require.Equal(t, optsMap[flags.FlagDisablePanicOnDaemonFailure], r.Shared.DisablePanicOnDaemonFailure)
 	require.Equal(
 		t,
-		optsMap[flags.FlagMaximumAllowableDaemonUnhealthySeconds],
-		r.Shared.MaximumAllowableDaemonUnhealthySeconds,
+		optsMap[flags.FlagMaximumDaemonUnhealthySeconds],
+		r.Shared.MaximumDaemonUnhealthySeconds,
 	)
 
 	// Bridge Daemon.
