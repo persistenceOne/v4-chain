@@ -39,11 +39,6 @@ func NewClient(logger log.Logger) *Client {
 	}
 }
 
-// ServiceName returns the name of the liquidations daemon service.
-func (c *Client) ServiceName() string {
-	return types.LiquidationsDaemonServiceName
-}
-
 // Start begins a job that periodically:
 // 1) Queries a gRPC server for all subaccounts including their open positions.
 // 2) Checks collateralization statuses of subaccounts with at least one open position.
