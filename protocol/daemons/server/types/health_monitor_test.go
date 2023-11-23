@@ -265,7 +265,9 @@ func TestHealthMonitor_DisablePanics_DoesNotPanic(t *testing.T) {
 
 	hc := mockFailingHealthCheckerWithError("test-service", TestError1)
 
-	hm.RegisterService(hc, 10*time.Millisecond)
+	err := hm.RegisterService(hc, 10*time.Millisecond)
+	require.NoError(t, err)
+
 	defer func() {
 		hm.Stop()
 	}()

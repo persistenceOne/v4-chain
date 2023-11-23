@@ -91,20 +91,6 @@ func (hc *healthChecker) Poll() {
 		// Capture the timestamp of the first failure in a new streak.
 		hc.firstFailureInStreak.Update(now, err)
 	}
-	hc.logger.Info(
-		"QQQQQQ Polling health checker",
-		"service",
-		hc.healthCheckable.ServiceName(),
-		"err",
-		err,
-		"mostRecentSuccess",
-		hc.mostRecentSuccess,
-		"firstFailureInStreak",
-		hc.firstFailureInStreak.Timestamp(),
-		"maximumAcceptableUnhealthyDuration",
-		hc.maximumAcceptableUnhealthyDuration,
-	)
-
 	// If the service has been unhealthy for longer than the maximum acceptable unhealthy duration, execute the
 	// callback function.
 	if !hc.firstFailureInStreak.IsZero() &&
@@ -140,7 +126,6 @@ func StartNewHealthChecker(
 	}
 	// The first poll is scheduled after the startup grace period to allow the service to initialize.
 	checker.timer = time.AfterFunc(startupGracePeriod, checker.Poll)
-	logger.Info("QQQQQQ Starting health checker", "service", healthCheckable.ServiceName())
 
 	return checker
 }
@@ -206,8 +191,6 @@ func (hm *HealthMonitor) RegisterServiceWithCallback(
 	hm.lock.Lock()
 	defer hm.lock.Unlock()
 
-	hm.logger.Info("QQQQQQ Registering health checker", "service", hc.ServiceName())
-
 	if maximumAcceptableUnhealthyDuration <= 0 {
 		return fmt.Errorf(
 			"health check registration failure for service %v: "+
@@ -232,13 +215,9 @@ func (hm *HealthMonitor) RegisterServiceWithCallback(
 		)
 	}
 
-	hm.logger.Info("QQQQQQ Registering health checker... checking for duplicates", "service", hc.ServiceName())
-
 	if _, ok := hm.serviceToHealthChecker[hc.ServiceName()]; ok {
 		return fmt.Errorf("service %v already registered", hc.ServiceName())
 	}
-
-	hm.logger.Info("QQQQQQ Registering health checker... creating new health checker", "service", hc.ServiceName())
 
 	hm.serviceToHealthChecker[hc.ServiceName()] = StartNewHealthChecker(
 		hc,
