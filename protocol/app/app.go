@@ -84,6 +84,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	ica "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts"
+	icatypes "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/types"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
@@ -165,7 +167,12 @@ import (
 	vestmodulekeeper "github.com/dydxprotocol/v4-chain/protocol/x/vest/keeper"
 	vestmoduletypes "github.com/dydxprotocol/v4-chain/protocol/x/vest/types"
 
-	// IBC
+	icacontroller "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/controller"
+	icacontrollerkeeper "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/controller/keeper"
+	icacontrollertypes "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/controller/types"
+	icahost "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/host"
+	icahostkeeper "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/host/keeper"
+	icahosttypes "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/host/types"
 	"github.com/cosmos/ibc-go/v7/modules/apps/transfer"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v7/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
@@ -239,6 +246,9 @@ type App struct {
 	TransferKeeper        ibctransferkeeper.Keeper
 	FeeGrantKeeper        feegrantkeeper.Keeper
 	ConsensusParamsKeeper consensusparamkeeper.Keeper
+	// ICA keepers
+	ICAControllerKeeper icacontrollerkeeper.Keeper
+	ICAHostKeeper       icahostkeeper.Keeper
 
 	// make scoped keepers public for test purposes
 	ScopedIBCKeeper      capabilitykeeper.ScopedKeeper
@@ -357,6 +367,8 @@ func New(
 		sendingmoduletypes.StoreKey,
 		delaymsgmoduletypes.StoreKey,
 		epochsmoduletypes.StoreKey,
+		icacontrollertypes.StoreKey,
+		icahosttypes.StoreKey,
 	)
 	tkeys := sdk.NewTransientStoreKeys(
 		paramstypes.TStoreKey,
@@ -531,9 +543,40 @@ func New(
 	transferModule := transfer.NewAppModule(app.TransferKeeper)
 	transferIBCModule := transfer.NewIBCModule(app.TransferKeeper)
 
-	// Create static IBC router, add transfer route, then set and seal it
+	// Create the ICA controller keeper
+	app.ICAControllerKeeper = icacontrollerkeeper.NewKeeper(
+		appCodec,
+		keys[icacontrollertypes.StoreKey],
+		app.getSubspace(icacontrollertypes.SubModuleName),
+		app.IBCKeeper.ChannelKeeper,
+		app.IBCKeeper.ChannelKeeper,
+		&app.IBCKeeper.PortKeeper,
+		app.CapabilityKeeper.ScopeToModule(icacontrollertypes.SubModuleName),
+		app.MsgServiceRouter(),
+	)
+
+	// Create the ICA host keeper
+	app.ICAHostKeeper = icahostkeeper.NewKeeper(
+		appCodec,
+		keys[icahosttypes.StoreKey],
+		app.getSubspace(icahosttypes.SubModuleName),
+		app.IBCKeeper.ChannelKeeper,
+		app.IBCKeeper.ChannelKeeper,
+		&app.IBCKeeper.PortKeeper,
+		app.AccountKeeper,
+		app.CapabilityKeeper.ScopeToModule(icahosttypes.SubModuleName),
+		app.MsgServiceRouter(),
+	)
+
+	// Create the ICA routes
+	icaControllerStack := icacontroller.NewIBCMiddleware(nil, app.ICAControllerKeeper)
+	icaHostIBCModule := icahost.NewIBCModule(app.ICAHostKeeper)
+
+	// Create static IBC router, add transfer and ICA routes, then set and seal it
 	ibcRouter := ibcporttypes.NewRouter()
 	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferIBCModule)
+	ibcRouter.AddRoute(icacontrollertypes.SubModuleName, icaControllerStack)
+	ibcRouter.AddRoute(icahosttypes.SubModuleName, icaHostIBCModule)
 	app.IBCKeeper.SetRouter(ibcRouter)
 
 	// create evidence keeper with router
@@ -934,6 +977,7 @@ func New(
 		upgrade.NewAppModule(app.UpgradeKeeper),
 		evidence.NewAppModule(app.EvidenceKeeper),
 		ibc.NewAppModule(app.IBCKeeper),
+		ica.NewAppModule(&app.ICAControllerKeeper, &app.ICAHostKeeper),
 		params.NewAppModule(app.ParamsKeeper),
 		consensus.NewAppModule(appCodec, app.ConsensusParamsKeeper),
 		transferModule,
@@ -988,6 +1032,7 @@ func New(
 		rewardsmoduletypes.ModuleName,
 		sendingmoduletypes.ModuleName,
 		delaymsgmoduletypes.ModuleName,
+		icatypes.ModuleName,
 	)
 
 	app.ModuleManager.SetOrderCommiters(
@@ -1024,6 +1069,7 @@ func New(
 		rewardsmoduletypes.ModuleName,
 		epochsmoduletypes.ModuleName,
 		delaymsgmoduletypes.ModuleName,
+		icatypes.ModuleName,
 		blocktimemoduletypes.ModuleName, // Must be last
 	)
 
@@ -1063,6 +1109,7 @@ func New(
 		rewardsmoduletypes.ModuleName,
 		sendingmoduletypes.ModuleName,
 		delaymsgmoduletypes.ModuleName,
+		icatypes.ModuleName,
 	)
 
 	// NOTE: by default, set migration order here to be the same as init genesis order,
@@ -1098,6 +1145,7 @@ func New(
 		rewardsmoduletypes.ModuleName,
 		sendingmoduletypes.ModuleName,
 		delaymsgmoduletypes.ModuleName,
+		icatypes.ModuleName,
 
 		// Auth must be migrated after staking.
 		authtypes.ModuleName,
@@ -1474,6 +1522,8 @@ func initParamsKeeper(
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibcexported.ModuleName)
+	paramsKeeper.Subspace(icahosttypes.SubModuleName)
+	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
 
 	return paramsKeeper
 }
